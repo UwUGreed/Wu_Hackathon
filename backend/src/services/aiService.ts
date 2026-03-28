@@ -286,16 +286,18 @@ function buildFallbackInsights(
     byCategory.set(cat, arr);
   }
 
-  const spendingPatterns: SpendingPattern[] = Array.from(byCategory.entries()).map(([category, txns]) => {
-    const total = txns.reduce((sum, t) => sum + t.amount, 0);
-    return {
-      category,
-      totalAmount: Number(total.toFixed(2)),
-      transactionCount: txns.length,
-      averageAmount: Number((total / Math.max(txns.length, 1)).toFixed(2)),
-      trend: "stable",
-    };
-  }).sort((a, b) => b.totalAmount - a.totalAmount);
+  const spendingPatterns: SpendingPattern[] = Array.from(byCategory.entries())
+    .map(([category, txns]): SpendingPattern => {
+      const total = txns.reduce((sum, t) => sum + t.amount, 0);
+      return {
+        category,
+        totalAmount: Number(total.toFixed(2)),
+        transactionCount: txns.length,
+        averageAmount: Number((total / Math.max(txns.length, 1)).toFixed(2)),
+        trend: "stable",
+      };
+    })
+    .sort((a, b) => b.totalAmount - a.totalAmount);
 
   const totalMonthlySubscriptions = Number(
     subscriptions.reduce((sum, s) => sum + s.amount, 0).toFixed(2)
@@ -415,4 +417,3 @@ function projectDangerDays(input: {
 
   return out;
 }
-

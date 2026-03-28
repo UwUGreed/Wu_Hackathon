@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="76" y1="48" x2="438" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF8EC"/>
+      <stop offset=".55" stop-color="#FFE9CB"/>
+      <stop offset="1" stop-color="#FFD9AE"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientTransform="translate(258 162) rotate(90) scale(176)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7D8"/>
+      <stop offset="1" stop-color="#FFF7D8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="168" y1="160" x2="356" y2="376" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC68A"/>
+      <stop offset=".35" stop-color="#FFA054"/>
+      <stop offset=".82" stop-color="#FF8438"/>
+      <stop offset="1" stop-color="#E86B28"/>
+    </linearGradient>
+    <radialGradient id="bodyGlow" cx="0" cy="0" r="1" gradientTransform="translate(212 206) rotate(45) scale(116 92)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD9AE"/>
+      <stop offset="1" stop-color="#FFD9AE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="leaf" x1="224" y1="76" x2="313" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9AF39A"/>
+      <stop offset=".6" stop-color="#62C96A"/>
+      <stop offset="1" stop-color="#3D9445"/>
+    </linearGradient>
+    <linearGradient id="stem" x1="256" y1="84" x2="256" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7AE07B"/>
+      <stop offset="1" stop-color="#3C8F44"/>
+    </linearGradient>
+    <filter id="shadow" x="66" y="68" width="380" height="374" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="18"/>
+      <feGaussianBlur stdDeviation="18"/>
+      <feColorMatrix values="0 0 0 0 0.596078 0 0 0 0 0.270588 0 0 0 0 0.0509804 0 0 0 0.24 0"/>
+      <feBlend in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <rect x="36" y="36" width="440" height="440" rx="120" fill="url(#bg)"/>
+  <circle cx="258" cy="162" r="176" fill="url(#orb)"/>
+  <ellipse cx="262" cy="390" rx="112" ry="30" fill="#7A3412" fill-opacity=".14"/>
+
+  <g filter="url(#shadow)">
+    <path d="M246 112c-8 0-14 6-14 14v62c0 8 6 14 14 14s14-6 14-14v-62c0-8-6-14-14-14Z" fill="url(#stem)"/>
+    <path d="M181 107c33-23 67-17 86 17-37 13-66 4-86-17Z" fill="url(#leaf)"/>
+    <path d="M329 108c-33-24-66-18-86 15 37 14 66 7 86-15Z" fill="url(#leaf)"/>
+
+    <ellipse cx="256" cy="274" rx="120" ry="118" fill="url(#body)"/>
+    <ellipse cx="282" cy="284" rx="94" ry="98" fill="#D85E1A" fill-opacity=".18"/>
+    <ellipse cx="215" cy="220" rx="80" ry="58" fill="url(#bodyGlow)"/>
+    <ellipse cx="198" cy="230" rx="30" ry="18" fill="#FFF4E6" fill-opacity=".58"/>
+    <ellipse cx="224" cy="198" rx="24" ry="14" fill="#FFF9F0" fill-opacity=".7"/>
+    <ellipse cx="330" cy="290" rx="24" ry="58" fill="#B94B16" fill-opacity=".18"/>
+
+    <ellipse cx="211" cy="321" rx="19" ry="12" fill="#FF8AA8" fill-opacity=".62"/>
+    <ellipse cx="301" cy="321" rx="19" ry="12" fill="#FF8AA8" fill-opacity=".62"/>
+
+    <rect x="196" y="354" width="24" height="52" rx="12" fill="#E27A31"/>
+    <rect x="292" y="354" width="24" height="52" rx="12" fill="#E27A31"/>
+    <rect x="200" y="362" width="20" height="44" rx="10" fill="#C85C1F" fill-opacity=".46"/>
+    <rect x="296" y="362" width="20" height="44" rx="10" fill="#C85C1F" fill-opacity=".46"/>
+
+    <ellipse cx="218" cy="266" rx="24" ry="26" fill="#FFFDFB"/>
+    <ellipse cx="294" cy="266" rx="24" ry="26" fill="#FFFDFB"/>
+    <ellipse cx="224" cy="270" rx="11" ry="13" fill="#2D2D3D"/>
+    <ellipse cx="300" cy="270" rx="11" ry="13" fill="#2D2D3D"/>
+    <circle cx="228" cy="266" r="3" fill="#FFFFFF"/>
+    <circle cx="304" cy="266" r="3" fill="#FFFFFF"/>
+
+    <path d="M224 324c9 11 21 16 32 16s23-5 32-16" stroke="#2D2D3D" stroke-linecap="round" stroke-width="11"/>
+  </g>
+</svg>
