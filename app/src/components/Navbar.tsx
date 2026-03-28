@@ -23,8 +23,8 @@ export default function Navbar() {
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'py-3 bg-warm-50/80 backdrop-blur-xl border-b border-warm-200/40 shadow-sm' : 'py-5 bg-transparent'}`}>
       <div className="section-pad flex items-center justify-between">
         <a href="#" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow">
-            <Shield size={16} className="text-white" />
+          <div className="w-8 h-8 rounded-lg bg-brand-200 flex items-center justify-center shadow-sm group-hover:shadow-glow transition-shadow">
+            <img src="/goob.svg" alt="Gooblet" className="w-8 h-8" />
           </div>
           <AnimatePresence>
             {scrolled && (

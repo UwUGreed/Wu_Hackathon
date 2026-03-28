@@ -26,6 +26,9 @@ export default function FinalCTA() {
           </motion.div>
           <motion.div initial={{ opacity: 0 }} animate={inView ? { opacity: 1 } : {}} transition={{ delay: 0.5 }} className="mt-16 pt-8 border-t border-warm-200/50">
             <p className="text-warm-800/30 text-sm font-medium">Interactive prototype · No real data · Built with care for a hackathon demo</p>
+            <p className="text-warm-800/35 text-xs mt-3 max-w-md mx-auto leading-relaxed">
+              Gooblet is not financial, legal, or tax advice. Any insights or numbers are for demonstration only and should not be relied on for real decisions.
+            </p>
             <p className="text-warm-800/20 text-xs mt-2">Gooblet © 2026</p>
           </motion.div>
         </motion.div>
