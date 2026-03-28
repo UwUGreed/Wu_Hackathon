@@ -2,12 +2,35 @@ import { RiskLevel, NormalizedTransaction } from "../types";
 import { Transaction as PlaidTransaction } from "plaid";
 import { Account } from "@prisma/client";
 
+export const DEMO_TRANSACTION_PREFIX = "demo_txn_";
+
 export function selectPrimaryAccount(accounts: Account[]): Account | null {
   const checking = accounts.find((a) => a.subtype === "checking");
   if (checking) return checking;
   const depository = accounts.find((a) => a.type === "depository");
   if (depository) return depository;
   return accounts[0] ?? null;
+}
+
+export function applyTransactionOffsetToBalance(balance: number | null | undefined, offset: number): number | null {
+  if (balance === null || balance === undefined) return null;
+  return Number((balance - offset).toFixed(2));
+}
+
+export function getAdjustedPrimaryBalances(account: Account, transactionOffset: number) {
+  const currentBalance = applyTransactionOffsetToBalance(
+    account.currentBalance ?? account.availableBalance ?? 0,
+    transactionOffset
+  );
+  const availableBalance = applyTransactionOffsetToBalance(
+    account.availableBalance ?? account.currentBalance ?? 0,
+    transactionOffset
+  );
+
+  return {
+    currentBalance,
+    availableBalance,
+  };
 }
 
 export function computeSafeToSpendToday(availableBalance: number | null, currentBalance: number | null, reserveBuffer: number): number {

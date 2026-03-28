@@ -1,7 +1,14 @@
 import { prisma } from "../db/client";
 import { env } from "../config/env";
 import { HomeResponse } from "../types";
-import { selectPrimaryAccount, computeSafeToSpendToday, classifyRisk, toNormalizedTransaction } from "../utils/helpers";
+import {
+  selectPrimaryAccount,
+  computeSafeToSpendToday,
+  classifyRisk,
+  toNormalizedTransaction,
+  DEMO_TRANSACTION_PREFIX,
+  getAdjustedPrimaryBalances,
+} from "../utils/helpers";
 import * as plaidService from "./plaidService";
 
 const UNLINKED_RESPONSE: HomeResponse = { institution: null, accountName: null, balance: null, availableBalance: null, safeToSpendToday: null, risk: null, linked: false, transactions: [] };
@@ -23,15 +30,31 @@ export async function buildHomeResponse(userId: string): Promise<HomeResponse> {
   const primary = selectPrimaryAccount(accounts);
   if (!primary) return UNLINKED_RESPONSE;
 
-  const availableBalance = primary.availableBalance ?? primary.currentBalance ?? 0;
-  const safeToSpend = computeSafeToSpendToday(primary.availableBalance, primary.currentBalance, env.RESERVE_BUFFER_NUM);
-  const risk = classifyRisk(safeToSpend);
+  const demoOffsetAggregate = await prisma.transaction.aggregate({
+    where: {
+      userId,
+      plaidAccountId: primary.plaidAccountId,
+      plaidTransactionId: { startsWith: DEMO_TRANSACTION_PREFIX },
+    },
+    _sum: { amount: true },
+  });
+
+  const demoTransactionOffset = demoOffsetAggregate._sum.amount ?? 0;
+  const adjustedBalances = getAdjustedPrimaryBalances(primary, demoTransactionOffset);
+  const availableBalance = adjustedBalances.availableBalance ?? 0;
+  const currentBalance = adjustedBalances.currentBalance ?? 0;
+  const adjustedSafeToSpend = computeSafeToSpendToday(
+    adjustedBalances.availableBalance,
+    adjustedBalances.currentBalance,
+    env.RESERVE_BUFFER_NUM
+  );
+  const risk = classifyRisk(adjustedSafeToSpend);
 
   const txns = await prisma.transaction.findMany({ where: { userId }, orderBy: { date: "desc" }, take: 25 });
 
   return {
     institution: plaidItem.institutionName ?? "Unknown", accountName: primary.officialName ?? primary.name,
-    balance: primary.currentBalance ?? 0, availableBalance, safeToSpendToday: safeToSpend,
+    balance: currentBalance, availableBalance, safeToSpendToday: adjustedSafeToSpend,
     risk, linked: true, transactions: txns.map(toNormalizedTransaction),
   };
 }

@@ -1,7 +1,13 @@
 import { Router, Request, Response } from "express";
 import { authMiddleware } from "../middleware/auth";
 import { prisma } from "../db/client";
-import { toNormalizedTransaction, selectPrimaryAccount, computeSafeToSpendToday } from "../utils/helpers";
+import {
+  toNormalizedTransaction,
+  selectPrimaryAccount,
+  computeSafeToSpendToday,
+  DEMO_TRANSACTION_PREFIX,
+  getAdjustedPrimaryBalances,
+} from "../utils/helpers";
 import { env } from "../config/env";
 import { generateBudgetInsights } from "../services/aiService";
 
@@ -9,13 +15,20 @@ const router = Router();
 
 router.get("/insights", authMiddleware, async (req: Request, res: Response) => {
   try {
-    const [transactions, accounts] = await Promise.all([
+    const [transactions, accounts, demoOffsetAggregate] = await Promise.all([
       prisma.transaction.findMany({
         where: { userId: req.user!.id },
         orderBy: { date: "desc" },
         take: 120,
       }),
       prisma.account.findMany({ where: { userId: req.user!.id } }),
+      prisma.transaction.aggregate({
+        where: {
+          userId: req.user!.id,
+          plaidTransactionId: { startsWith: DEMO_TRANSACTION_PREFIX },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     const normalizedTransactions = transactions.map(toNormalizedTransaction).map((t) => ({
@@ -28,11 +41,15 @@ router.get("/insights", authMiddleware, async (req: Request, res: Response) => {
     }));
 
     const primary = selectPrimaryAccount(accounts);
-    const availableBalance = primary?.availableBalance ?? 0;
-    const currentBalance = primary?.currentBalance ?? 0;
+    const demoTransactionOffset = demoOffsetAggregate._sum.amount ?? 0;
+    const adjustedBalances = primary
+      ? getAdjustedPrimaryBalances(primary, demoTransactionOffset)
+      : { currentBalance: 0, availableBalance: 0 };
+    const availableBalance = adjustedBalances.availableBalance ?? 0;
+    const currentBalance = adjustedBalances.currentBalance ?? 0;
     const safeToSpendToday = computeSafeToSpendToday(
-      primary?.availableBalance ?? null,
-      primary?.currentBalance ?? null,
+      adjustedBalances.availableBalance,
+      adjustedBalances.currentBalance,
       env.RESERVE_BUFFER_NUM
     );
 

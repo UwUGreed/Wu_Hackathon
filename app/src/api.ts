@@ -167,6 +167,13 @@ export interface BudgetInsights {
   recommendations: AIRecommendation[];
 }
 
+export interface DemoTransactionResponse {
+  success: boolean
+  message: string
+  transaction: Transaction
+  homeData: HomeData
+}
+
 // ─── API methods ──────────────────────────────────────────────────
 
 export const api = {
@@ -212,6 +219,11 @@ export const api = {
 
   resetDemo: () =>
     request<{ success: boolean; message: string }>('/dev/reset-demo', {
+      method: 'POST',
+    }),
+
+  simulateDemoTransaction: () =>
+    request<DemoTransactionResponse>('/dev/simulate-transaction', {
       method: 'POST',
     }),
 };
