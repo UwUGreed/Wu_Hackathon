@@ -9,6 +9,7 @@ import homeRouter from "./routes/home";
 import accountsRouter from "./routes/accounts";
 import transactionsRouter from "./routes/transactions";
 import devRouter from "./routes/dev";
+import widgetRouter from "./routes/widget";
 
 const app = express();
 app.use(express.json());
@@ -20,5 +21,6 @@ app.use(homeRouter);
 app.use(accountsRouter);
 app.use(transactionsRouter);
 app.use(devRouter);
+app.use(widgetRouter);
 app.use(errorHandler);
 export default app;

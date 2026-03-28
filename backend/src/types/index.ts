@@ -9,6 +9,7 @@ declare global {
 }
 
 export type RiskLevel = "CALM" | "WATCH" | "TIGHT" | "CRITICAL";
+export type WidgetMood = "happy" | "calm" | "worried" | "alert" | "sleepy";
 
 export interface HomeResponse {
   institution: string | null;
@@ -19,6 +20,17 @@ export interface HomeResponse {
   risk: RiskLevel | null;
   linked: boolean;
   transactions: NormalizedTransaction[];
+}
+
+export interface WidgetSummaryResponse {
+  linked: boolean;
+  displayName: string;
+  institution: string | null;
+  safeToSpendToday: number | null;
+  risk: RiskLevel | null;
+  mood: WidgetMood;
+  message: string;
+  updatedAt: string;
 }
 
 export interface NormalizedTransaction {

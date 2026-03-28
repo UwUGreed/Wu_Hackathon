@@ -11,6 +11,28 @@ const loginSchema = z.object({ username: z.string().trim().min(1, "Username is r
 function normalizeUsername(username: string) { return username.trim().toLowerCase(); }
 function usernameToEmail(username: string) { return createHash("sha256").update(normalizeUsername(username)).digest("hex").slice(0, 24) + "@demo.local"; }
 function createAuthToken() { return randomBytes(24).toString("hex"); }
+function createWidgetToken() { return randomBytes(18).toString("hex"); }
+
+async function ensureWidgetToken(userId: string) {
+  const rows = await prisma.$queryRaw<Array<{ widgetToken: string | null }>>`
+    SELECT widget_token AS widgetToken
+    FROM users
+    WHERE id = ${userId}
+    LIMIT 1
+  `;
+
+  const existingToken = rows[0]?.widgetToken ?? null;
+  if (existingToken) return existingToken;
+
+  const widgetToken = createWidgetToken();
+  await prisma.$executeRaw`
+    UPDATE users
+    SET widget_token = ${widgetToken}
+    WHERE id = ${userId}
+  `;
+
+  return widgetToken;
+}
 
 router.post("/auth/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
@@ -22,11 +44,12 @@ router.post("/auth/login", async (req, res) => {
   const displayName = username.trim();
   const email = usernameToEmail(displayName);
 
-  const user = await prisma.user.upsert({
+  let user = await prisma.user.upsert({
     where: { email },
     create: { id: randomUUID(), email, displayName, authToken },
     update: { displayName, authToken },
   });
+  const widgetToken = await ensureWidgetToken(user.id);
 
   // Clean slate on every login
   await prisma.$transaction([
@@ -35,12 +58,26 @@ router.post("/auth/login", async (req, res) => {
     prisma.plaidItem.deleteMany({ where: { userId: user.id } }),
   ]);
 
-  res.json({ token: authToken, user: { id: user.id, email: user.email, displayName: user.displayName } });
+  res.json({
+    token: authToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      widgetToken,
+    },
+  });
 });
 
-router.get("/auth/me", authMiddleware, (req, res) => {
+router.get("/auth/me", authMiddleware, async (req, res) => {
   const user = req.user!;
-  res.json({ id: user.id, email: user.email, displayName: user.displayName });
+  const widgetToken = await ensureWidgetToken(user.id);
+  res.json({
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    widgetToken,
+  });
 });
 
 export default router;

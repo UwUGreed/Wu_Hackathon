@@ -12,6 +12,7 @@ model User {
   email       String   @unique
   displayName String   @map("display_name")
   authToken   String   @map("auth_token")
+  widgetToken String?  @unique @map("widget_token")
   createdAt   DateTime @default(now()) @map("created_at")
 
   plaidItems   PlaidItem[]
