@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, LogOut, RefreshCw, Wallet, TrendingDown,
-  Building2, CreditCard, ArrowDownRight, ArrowUpRight, Clock, Trash2, Copy, ExternalLink
+  Building2, CreditCard, ArrowDownRight, ArrowUpRight, Clock, Trash2, Brain, AlertTriangle
 } from 'lucide-react'
 import { api, buildApiUrl } from '../api'
-import type { Transaction } from '../api'
+import type { BudgetInsights, Transaction } from '../api'
 import { useAppStore } from '../store'
 import Mascot from './Mascot'
 import PlaidLinkButton from './PlaidLinkButton'
@@ -35,6 +35,14 @@ function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function toIsoDate(value: string): string | null {
+  if (!value) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  const direct = new Date(value)
+  if (Number.isNaN(direct.getTime())) return null
+  return direct.toISOString().slice(0, 10)
+}
+
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text)
@@ -62,11 +70,11 @@ function buildScriptableWidgetScript(widgetUrl: string, appUrl: string) {
 const OPEN_URL = ${JSON.stringify(appUrl)}
 
 const palette = {
-  happy: { top: '#F9FCEB', bottom: '#DFF2C8', accent: '#3F7A35', accentSoft: '#EDF8E2', orb: '#A7D37A' },
-  calm: { top: '#EFF6FF', bottom: '#D6E7FF', accent: '#2F5F9F', accentSoft: '#E5F0FF', orb: '#93B9F3' },
-  worried: { top: '#FFF7EA', bottom: '#FFDCA7', accent: '#A56400', accentSoft: '#FFF0D5', orb: '#F2B75A' },
-  alert: { top: '#FFF2F0', bottom: '#FFD6CF', accent: '#B2443B', accentSoft: '#FFE7E2', orb: '#F09384' },
-  sleepy: { top: '#F6F1FF', bottom: '#E6DEFF', accent: '#6A5AA6', accentSoft: '#F0EBFF', orb: '#B7A6F4' },
+  happy: { top: '#F4FBEF', bottom: '#DCEFD2', accent: '#3F7A35' },
+  calm: { top: '#EEF5FF', bottom: '#DCE9FF', accent: '#2F5F9F' },
+  worried: { top: '#FFF6E6', bottom: '#FFE3B0', accent: '#A56400' },
+  alert: { top: '#FFF0EF', bottom: '#FFD7D2', accent: '#B2443B' },
+  sleepy: { top: '#F7F0FF', bottom: '#EBE2FF', accent: '#6A5AA6' },
 }
 
 async function loadData() {
@@ -80,155 +88,52 @@ function formatMoney(value) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: Math.abs(value) < 100 ? 2 : 0,
-    maximumFractionDigits: Math.abs(value) < 100 ? 2 : 0,
+    maximumFractionDigits: 0,
   }).format(value)
 }
 
-function formatUpdatedAt(value) {
-  if (!value) return 'Updated just now'
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Updated just now'
-
-  let hours = date.getHours()
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const suffix = hours >= 12 ? 'PM' : 'AM'
-  hours = hours % 12 || 12
-
-  return 'Updated ' + hours + ':' + minutes + ' ' + suffix
+function faceForMood(mood) {
+  if (mood === 'happy') return '◡'
+  if (mood === 'worried') return '﹏'
+  if (mood === 'alert') return 'o'
+  if (mood === 'sleepy') return '︵'
+  return '–'
 }
 
-function shortenInstitution(value) {
-  if (!value) return 'Demo mode'
-  if (value.length <= 16) return value
-  return value.slice(0, 15) + '…'
-}
-
-function addPill(parent, text, backgroundColor, textColor) {
-  const pill = parent.addStack()
-  pill.layoutHorizontally()
-  pill.centerAlignContent()
-  pill.backgroundColor = new Color(backgroundColor)
-  pill.cornerRadius = 999
-  pill.setPadding(6, 10, 6, 10)
-
-  const label = pill.addText(text)
-  label.font = Font.mediumSystemFont(10)
-  label.textColor = new Color(textColor)
-  label.lineLimit = 1
-
-  return pill
-}
-
-function addSoftGlow(ctx, theme) {
-  ctx.setFillColor(new Color(theme.orb, 0.18))
-  ctx.fillEllipse(new Rect(20, 28, 180, 180))
-  ctx.setFillColor(new Color('#FFFFFF', 0.28))
-  ctx.fillEllipse(new Rect(36, 42, 92, 92))
-  ctx.setFillColor(new Color('#FFFFFF', 0.12))
-  ctx.fillEllipse(new Rect(54, 46, 120, 120))
-}
-
-function drawEyes(ctx, mood) {
-  if (mood === 'sleepy') {
-    ctx.setFillColor(new Color('#2D2D3D', 0.9))
-    ctx.fillEllipse(new Rect(62, 96, 30, 6))
-    ctx.fillEllipse(new Rect(128, 96, 30, 6))
-    return
-  }
-
-  if (mood === 'happy') {
-    ctx.setFillColor(new Color('#2D2D3D', 0.9))
-    ctx.fillEllipse(new Rect(62, 94, 28, 8))
-    ctx.fillEllipse(new Rect(130, 94, 28, 8))
-    return
-  }
-
-  ctx.setFillColor(new Color('#FFFFFF'))
-  const eyeHeight = mood === 'alert' ? 26 : 22
-  ctx.fillEllipse(new Rect(58, 84, 32, eyeHeight))
-  ctx.fillEllipse(new Rect(130, 84, 32, eyeHeight))
-
-  ctx.setFillColor(new Color('#2D2D3D'))
-  const pupilWidth = mood === 'alert' ? 14 : 12
-  const pupilHeight = mood === 'alert' ? 14 : 12
-  const pupilY = mood === 'worried' ? 90 : 92
-  ctx.fillEllipse(new Rect(68, pupilY, pupilWidth, pupilHeight))
-  ctx.fillEllipse(new Rect(140, pupilY, pupilWidth, pupilHeight))
-
-  ctx.setFillColor(new Color('#FFFFFF', 0.75))
-  ctx.fillEllipse(new Rect(72, 92, 4, 4))
-  ctx.fillEllipse(new Rect(144, 92, 4, 4))
-}
-
-function drawMascotFace(ctx, mood) {
-  drawEyes(ctx, mood)
-
-  const mouthMap = {
-    happy: { value: '◡', rect: new Rect(0, 112, 220, 28), size: 28 },
-    calm: { value: '◠', rect: new Rect(0, 114, 220, 26), size: 24 },
-    worried: { value: '﹏', rect: new Rect(0, 114, 220, 26), size: 24 },
-    alert: { value: 'o', rect: new Rect(0, 110, 220, 30), size: 28 },
-    sleepy: { value: '︵', rect: new Rect(0, 114, 220, 24), size: 22 },
-  }
-
-  const mouth = mouthMap[mood] || mouthMap.calm
-  ctx.setTextAlignedCenter()
-  ctx.setTextColor(new Color('#2D2D3D'))
-  ctx.setFont(Font.mediumSystemFont(mouth.size))
-  ctx.drawTextInRect(mouth.value, mouth.rect)
-}
-
-function drawMascot(mood, theme) {
+function drawMascot(mood) {
   const ctx = new DrawContext()
-  ctx.size = new Size(220, 220)
+  ctx.size = new Size(140, 140)
   ctx.opaque = false
   ctx.respectScreenScale = true
 
-  addSoftGlow(ctx, theme)
-
-  ctx.setFillColor(new Color('#C25F27', 0.22))
-  ctx.fillEllipse(new Rect(58, 174, 104, 18))
-
-  ctx.setFillColor(new Color('#DE7432'))
-  ctx.fillEllipse(new Rect(62, 154, 30, 20))
-  ctx.fillEllipse(new Rect(128, 154, 30, 20))
-
-  ctx.setFillColor(new Color('#D86B2B'))
-  ctx.fillEllipse(new Rect(46, 74, 128, 110))
-  ctx.setFillColor(new Color('#FF914D'))
-  ctx.fillEllipse(new Rect(40, 58, 136, 112))
-  ctx.setFillColor(new Color('#FFB988', 0.55))
-  ctx.fillEllipse(new Rect(58, 72, 70, 40))
-  ctx.setFillColor(new Color('#F17937', 0.38))
-  ctx.fillEllipse(new Rect(106, 94, 46, 48))
-  ctx.setFillColor(new Color('#FFFFFF', 0.16))
-  ctx.fillEllipse(new Rect(56, 70, 88, 56))
-
-  ctx.setFillColor(new Color('#F78742'))
-  ctx.fillEllipse(new Rect(28, 92, 24, 34))
-  ctx.fillEllipse(new Rect(168, 92, 24, 34))
-
-  ctx.setFillColor(new Color('#FF7A93', 0.34))
-  ctx.fillEllipse(new Rect(44, 110, 22, 14))
-  ctx.fillEllipse(new Rect(154, 110, 22, 14))
+  ctx.setFillColor(new Color('#FF954A'))
+  ctx.fillEllipse(new Rect(20, 28, 100, 92))
 
   ctx.setFillColor(new Color('#5BA65B'))
-  ctx.fillRect(new Rect(105, 26, 8, 26))
+  ctx.fillRect(new Rect(68, 12, 5, 18))
   ctx.setFillColor(new Color('#6BC26B'))
-  ctx.fillEllipse(new Rect(78, 18, 32, 22))
-  ctx.fillEllipse(new Rect(104, 14, 38, 26))
-  ctx.setFillColor(new Color('#8ED98A', 0.55))
-  ctx.fillEllipse(new Rect(88, 20, 16, 10))
-  ctx.fillEllipse(new Rect(112, 17, 18, 11))
+  ctx.fillEllipse(new Rect(52, 6, 22, 16))
+  ctx.fillEllipse(new Rect(68, 6, 22, 16))
 
-  drawMascotFace(ctx, mood)
+  ctx.setFillColor(new Color('#FFFFFF'))
+  const eyeHeight = mood === 'sleepy' ? 6 : 14
+  ctx.fillEllipse(new Rect(45, 58, 16, eyeHeight))
+  ctx.fillEllipse(new Rect(79, 58, 16, eyeHeight))
+
+  ctx.setFillColor(new Color('#2D2D3D'))
+  const pupilHeight = mood === 'sleepy' ? 2 : 8
+  ctx.fillEllipse(new Rect(49, 61, 8, pupilHeight))
+  ctx.fillEllipse(new Rect(83, 61, 8, pupilHeight))
+
+  ctx.setTextAlignedCenter()
+  ctx.setTextColor(new Color('#2D2D3D'))
+  ctx.setFont(Font.mediumSystemFont(mood === 'alert' ? 24 : 22))
+  ctx.drawTextInRect(faceForMood(mood), new Rect(0, 82, 140, 26))
 
   return ctx.getImage()
 }
 
-function buildMediumWidget(data) {
+function buildWidget(data) {
   const mood = data.mood || 'calm'
   const theme = palette[mood] || palette.calm
 
@@ -237,192 +142,59 @@ function buildMediumWidget(data) {
   gradient.colors = [new Color(theme.top), new Color(theme.bottom)]
   gradient.locations = [0, 1]
   widget.backgroundGradient = gradient
-  widget.setPadding(18, 18, 18, 18)
+  widget.setPadding(16, 16, 16, 16)
   widget.url = OPEN_URL
-  widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
 
   const topRow = widget.addStack()
   topRow.layoutHorizontally()
   topRow.centerAlignContent()
 
-  const mascotCard = topRow.addStack()
-  mascotCard.size = new Size(112, 112)
-  mascotCard.centerAlignContent()
-  mascotCard.backgroundColor = new Color('#FFFFFF', 0.2)
-  mascotCard.cornerRadius = 28
-  mascotCard.borderWidth = 1
-  mascotCard.borderColor = new Color('#FFFFFF', 0.24)
-  const mascot = mascotCard.addImage(drawMascot(mood, theme))
-  mascot.imageSize = new Size(108, 108)
+  const mascot = topRow.addImage(drawMascot(mood))
+  mascot.imageSize = new Size(68, 68)
 
-  topRow.addSpacer(14)
+  topRow.addSpacer(12)
 
   const details = topRow.addStack()
   details.layoutVertically()
-  details.centerAlignContent()
-
-  const pillRow = details.addStack()
-  pillRow.layoutHorizontally()
-  addPill(
-    pillRow,
-    data.linked ? (data.risk || 'CHECK-IN') : 'SETUP',
-    theme.accentSoft,
-    theme.accent,
-  )
-  pillRow.addSpacer(6)
-  addPill(
-    pillRow,
-    shortenInstitution(data.institution),
-    '#FFFFFF',
-    '#5B6473',
-  )
-
-  details.addSpacer(10)
-
-  const labelLine = details.addText('SAFE TO SPEND TODAY')
-  labelLine.font = Font.mediumSystemFont(10)
-  labelLine.textColor = new Color('#6B7280')
-
-  details.addSpacer(2)
-
-  const amountLine = details.addText(formatMoney(data.safeToSpendToday))
-  amountLine.font = Font.boldRoundedSystemFont(28)
-  amountLine.textColor = new Color(theme.accent)
-  amountLine.minimumScaleFactor = 0.7
-  amountLine.lineLimit = 1
-
-  details.addSpacer(4)
 
   const nameLine = details.addText(data.displayName || 'Make It to Payday')
   nameLine.font = Font.mediumSystemFont(12)
-  nameLine.textColor = new Color('#4B5563')
-  nameLine.lineLimit = 1
+  nameLine.textColor = new Color('#6B7280')
 
-  const stateLine = details.addText(data.linked ? 'Linked and tracking' : 'Not linked yet')
-  stateLine.font = Font.mediumSystemFont(10)
-  stateLine.textColor = new Color('#7A8492')
-  stateLine.lineLimit = 1
+  const amountLine = details.addText(formatMoney(data.safeToSpendToday))
+  amountLine.font = Font.boldRoundedSystemFont(26)
+  amountLine.textColor = new Color(theme.accent)
+
+  const riskLine = details.addText(data.linked ? (data.risk || 'CHECK-IN') : 'NOT LINKED')
+  riskLine.font = Font.semiboldSystemFont(11)
+  riskLine.textColor = new Color('#4B5563')
 
   widget.addSpacer(12)
 
-  const messageCard = widget.addStack()
-  messageCard.layoutHorizontally()
-  messageCard.centerAlignContent()
-  messageCard.backgroundColor = new Color('#FFFFFF', 0.18)
-  messageCard.cornerRadius = 20
-  messageCard.borderWidth = 1
-  messageCard.borderColor = new Color('#FFFFFF', 0.18)
-  messageCard.setPadding(11, 12, 11, 12)
-
-  const pulse = messageCard.addStack()
-  pulse.size = new Size(10, 10)
-  pulse.backgroundColor = new Color(theme.accent)
-  pulse.cornerRadius = 5
-
-  messageCard.addSpacer(10)
-
-  const messageLine = messageCard.addText(data.message || 'Open the app for details.')
+  const messageLine = widget.addText(data.message || 'Open the app for details.')
   messageLine.font = Font.mediumSystemFont(12)
   messageLine.textColor = new Color('#374151')
   messageLine.minimumScaleFactor = 0.8
-  messageLine.lineLimit = 2
-
-  widget.addSpacer(10)
-
-  const footer = widget.addStack()
-  footer.layoutHorizontally()
-  footer.centerAlignContent()
-
-  const updatedLine = footer.addText(formatUpdatedAt(data.updatedAt))
-  updatedLine.font = Font.mediumSystemFont(10)
-  updatedLine.textColor = new Color('#6B7280')
-  updatedLine.lineLimit = 1
-
-  footer.addSpacer()
-
-  const openLine = footer.addText('Tap to open')
-  openLine.font = Font.mediumSystemFont(10)
-  openLine.textColor = new Color(theme.accent)
-  openLine.lineLimit = 1
-
-  return widget
-}
-
-function buildSmallWidget(data) {
-  const mood = data.mood || 'calm'
-  const theme = palette[mood] || palette.calm
-
-  const widget = new ListWidget()
-  const gradient = new LinearGradient()
-  gradient.colors = [new Color(theme.top), new Color(theme.bottom)]
-  gradient.locations = [0, 1]
-  widget.backgroundGradient = gradient
-  widget.url = OPEN_URL
-  widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
-  widget.setPadding(14, 14, 14, 14)
-
-  const top = widget.addStack()
-  top.layoutHorizontally()
-  addPill(top, data.linked ? (data.risk || 'CHECK-IN') : 'SETUP', theme.accentSoft, theme.accent)
-  top.addSpacer()
 
   widget.addSpacer(6)
 
-  const mascot = widget.addImage(drawMascot(mood, theme))
-  mascot.imageSize = new Size(84, 84)
-  mascot.centerAlignImage()
-
-  widget.addSpacer(4)
-
-  const amount = widget.addText(formatMoney(data.safeToSpendToday))
-  amount.font = Font.boldRoundedSystemFont(22)
-  amount.textColor = new Color(theme.accent)
-  amount.centerAlignText()
-  amount.minimumScaleFactor = 0.7
-  amount.lineLimit = 1
-
-  const label = widget.addText('Safe to spend')
-  label.font = Font.mediumSystemFont(10)
-  label.textColor = new Color('#6B7280')
-  label.centerAlignText()
-  label.lineLimit = 1
-
-  widget.addSpacer()
-
-  const footer = widget.addText(shortenInstitution(data.institution))
-  footer.font = Font.mediumSystemFont(10)
-  footer.textColor = new Color('#4B5563')
-  footer.centerAlignText()
-  footer.lineLimit = 1
+  const subLine = widget.addText(data.institution || 'Tap to open dashboard')
+  subLine.font = Font.mediumSystemFont(10)
+  subLine.textColor = new Color('#6B7280')
+  subLine.minimumScaleFactor = 0.8
 
   return widget
-}
-
-function buildWidget(data) {
-  if (config.widgetFamily === 'small') return buildSmallWidget(data)
-  return buildMediumWidget(data)
 }
 
 function buildErrorWidget(message) {
   const widget = new ListWidget()
-  const gradient = new LinearGradient()
-  gradient.colors = [new Color('#FFF8F3'), new Color('#FFE7D6')]
-  gradient.locations = [0, 1]
-  widget.backgroundGradient = gradient
+  widget.backgroundColor = new Color('#FFF7ED')
   widget.url = OPEN_URL
   widget.setPadding(16, 16, 16, 16)
-  widget.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000)
-
-  const mascot = widget.addImage(drawMascot('sleepy', palette.sleepy))
-  mascot.imageSize = new Size(80, 80)
-  mascot.centerAlignImage()
-
-  widget.addSpacer(8)
 
   const title = widget.addText('Widget setup needed')
   title.font = Font.boldSystemFont(16)
   title.textColor = new Color('#9A3412')
-  title.centerAlignText()
 
   widget.addSpacer(8)
 
@@ -430,8 +202,6 @@ function buildErrorWidget(message) {
   detail.font = Font.mediumSystemFont(12)
   detail.textColor = new Color('#7C2D12')
   detail.minimumScaleFactor = 0.8
-  detail.centerAlignText()
-  detail.lineLimit = 3
 
   return widget
 }
@@ -460,6 +230,9 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [widgetStatus, setWidgetStatus] = useState<string | null>(null)
+  const [insights, setInsights] = useState<BudgetInsights | null>(null)
+  const [insightsError, setInsightsError] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const fetchHome = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true)
@@ -497,16 +270,24 @@ export default function Dashboard() {
   const appUrl = typeof window === 'undefined' ? '/dashboard' : new URL('/dashboard', window.location.origin).toString()
   const scriptableScript = widgetUrl ? buildScriptableWidgetScript(widgetUrl, appUrl) : ''
   const widgetUsesLocalhost = widgetUrl.includes('localhost') || widgetUrl.includes('127.0.0.1')
-  const showWidgetButton = Boolean(widgetToken)
 
-  const handleCopyScriptableScript = async () => {
-    if (!scriptableScript) {
+  const handleCopyWidgetUrl = async () => {
+    if (!widgetUrl) {
       setWidgetStatus('No widget token yet. Sign in again to generate one.')
       return
     }
 
-    if (widgetUsesLocalhost) {
-      setWidgetStatus('Open the app from your computer’s LAN IP or a tunnel before copying the Scriptable setup.')
+    try {
+      await copyText(widgetUrl)
+      setWidgetStatus('Widget URL copied. Paste it into Scriptable or use it to preview the JSON.')
+    } catch {
+      setWidgetStatus('Could not copy the widget URL automatically.')
+    }
+  }
+
+  const handleCopyScriptableScript = async () => {
+    if (!scriptableScript) {
+      setWidgetStatus('No widget token yet. Sign in again to generate one.')
       return
     }
 
@@ -515,6 +296,20 @@ export default function Dashboard() {
       setWidgetStatus('Script copied. Paste it into a new Scriptable script on your iPhone.')
     } catch {
       setWidgetStatus('Could not copy the Scriptable script automatically.')
+    }
+  }
+
+  const handleAnalyzeBudget = async () => {
+    setIsAnalyzing(true)
+    setInsightsError(null)
+    try {
+      const data = await api.insights()
+      setInsights(data)
+    } catch (err) {
+      console.error('AI insights failed:', err)
+      setInsightsError('Could not generate AI budget insights right now.')
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -591,6 +386,250 @@ export default function Dashboard() {
               <StatCard icon={<Wallet size={18} />} label="Current Balance" value={formatCurrency(homeData?.balance ?? null)} accent />
               <StatCard icon={<TrendingDown size={18} />} label="Available" value={formatCurrency(homeData?.availableBalance ?? null)} />
             </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.5 }}>
+              <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
+                <div className="px-6 py-4 border-b border-warm-100/60 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain size={16} className="text-warm-800/40" />
+                    <h3 className="font-display font-700 text-base text-warm-900 tracking-tight">AI Budget Plan</h3>
+                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleAnalyzeBudget}
+                    disabled={isAnalyzing}
+                    className="px-4 py-2 rounded-xl bg-warm-900 text-white text-sm font-semibold hover:bg-warm-800 transition-colors disabled:opacity-60"
+                  >
+                    {isAnalyzing ? 'Analyzing...' : 'Analyze My Budget'}
+                  </motion.button>
+                </div>
+                <div className="p-6 space-y-4">
+                  {insightsError && (
+                    <div className="rounded-2xl bg-red-50 border border-red-200/70 px-4 py-3 text-sm font-medium text-red-700">
+                      {insightsError}
+                    </div>
+                  )}
+                  {!insights && !isAnalyzing && !insightsError && (
+                    <p className="text-sm text-warm-800/50">
+                      Generate a plan based on your balance, transaction history, spending habits, and recurring subscriptions.
+                    </p>
+                  )}
+                  {insights && (
+                    <>
+                      <p className="text-sm text-warm-800/60">{insights.summary}</p>
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+                        <MiniStat label="Needs / week" value={formatCurrency(insights.budgetPlan.weeklyNeedsBudget)} />
+                        <MiniStat label="Wants / week" value={formatCurrency(insights.budgetPlan.weeklyWantsBudget)} />
+                        <MiniStat label="Savings / week" value={formatCurrency(insights.budgetPlan.weeklySavingsTarget)} />
+                        <MiniStat label="Daily cap" value={formatCurrency(insights.budgetPlan.dailySpendingCap)} />
+                        <MiniStat label="30-day cash flow" value={formatCurrency(insights.budgetPlan.next30DayCashFlow)} />
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                          <p className="text-warm-800/40 text-[11px] font-bold tracking-wider uppercase mb-3">Detected subscriptions</p>
+                          <div className="space-y-2 max-h-52 overflow-auto pr-1">
+                            {insights.subscriptions.length === 0 ? (
+                              <p className="text-sm text-warm-800/45">No recurring subscriptions detected yet.</p>
+                            ) : (
+                              insights.subscriptions.map((sub, idx) => (
+                                <div key={`${sub.name}-${idx}`} className="flex items-center justify-between text-sm">
+                                  <div className="min-w-0">
+                                    <p className="font-semibold text-warm-900 truncate">{sub.name}</p>
+                                    <p className="text-xs text-warm-800/45">{sub.frequency} · {Math.round(sub.confidence * 100)}% confidence</p>
+                                  </div>
+                                  <span className="font-semibold text-warm-900 ml-3">{formatCurrency(sub.amount)}</span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                          <p className="text-xs text-warm-800/50 mt-3">Estimated monthly subscription load: {formatCurrency(insights.totalMonthlySubscriptions)}</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-amber-50/70 border border-amber-200/70 p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <AlertTriangle size={14} className="text-amber-700" />
+                            <p className="text-amber-800 text-[11px] font-bold tracking-wider uppercase">Step 03: Danger days prediction</p>
+                          </div>
+                          <p className="text-xs text-amber-800/80 mb-3">
+                            Days when your balance gets risky before your next paycheck. We catch them early.
+                          </p>
+                          {insights.nextPayday && (
+                            <p className="text-xs text-amber-900/80 mb-2">Next estimated payday: {formatDate(insights.nextPayday)}</p>
+                          )}
+                          {(() => {
+                            const weekdays = ['S', 'M', 'T', 'W', 'Th', 'F', 'S']
+                            const normalizedDangerDays = insights.dangerDays
+                              .map((entry) => {
+                                const iso = toIsoDate(entry.date)
+                                if (!iso) return null
+                                return {
+                                  ...entry,
+                                  dateIso: iso,
+                                  severity: String(entry.severity).toLowerCase() as 'watch' | 'tight' | 'critical',
+                                }
+                              })
+                              .filter((entry): entry is NonNullable<typeof entry> => !!entry)
+                              .sort((a, b) => a.dateIso.localeCompare(b.dateIso))
+
+                            const firstDangerDate = normalizedDangerDays[0]?.dateIso ?? null
+                            const baseIso = firstDangerDate || toIsoDate(insights.nextPayday || '')
+                            const base = baseIso ? new Date(`${baseIso}T00:00:00`) : new Date()
+                            const monthStart = new Date(base.getFullYear(), base.getMonth(), 1)
+                            const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate()
+                            const firstDayOffset = monthStart.getDay()
+
+                            const dayCells: Array<{ day: number; iso: string } | null> = []
+                            for (let i = 0; i < firstDayOffset; i++) dayCells.push(null)
+                            for (let d = 1; d <= daysInMonth; d++) {
+                              const iso = new Date(base.getFullYear(), base.getMonth(), d).toISOString().slice(0, 10)
+                              dayCells.push({ day: d, iso })
+                            }
+                            while (dayCells.length % 7 !== 0) dayCells.push(null)
+
+                            const dangerByDate = new Map(normalizedDangerDays.map((entry) => [entry.dateIso, entry]))
+
+                            return (
+                              <div className="rounded-2xl bg-white/70 border border-amber-100 overflow-hidden">
+                                <div className="px-3 py-2 border-b border-amber-100/70 text-sm font-semibold text-warm-900">
+                                  {base.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </div>
+                                <div className="grid grid-cols-7 bg-warm-50/70 border-b border-amber-100/70">
+                                  {weekdays.map((label) => (
+                                    <div key={label} className="text-center text-xs font-medium text-warm-800/60 py-1.5 border-r last:border-r-0 border-amber-100/70">
+                                      {label}
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="grid grid-cols-7">
+                                  {dayCells.map((cell, idx) => {
+                                    const danger = cell ? dangerByDate.get(cell.iso) : undefined
+                                    const severityClass =
+                                      danger?.severity === 'critical'
+                                        ? 'bg-red-50'
+                                        : danger?.severity === 'tight'
+                                        ? 'bg-amber-50'
+                                        : danger?.severity === 'watch'
+                                        ? 'bg-yellow-50'
+                                        : 'bg-white/50'
+
+                                    return (
+                                      <div
+                                        key={`${idx}-${cell ? cell.iso : 'empty'}`}
+                                        className={`h-16 md:h-20 border-r border-b border-amber-100/70 last:border-r-0 relative ${severityClass}`}
+                                      >
+                                        {cell && (
+                                          <>
+                                            <span className="absolute top-1.5 left-1.5 text-xs font-medium text-warm-800/70">{cell.day}</span>
+                                            {danger && (
+                                              <span
+                                                className={`absolute bottom-1.5 right-1.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                                                  danger.severity === 'critical'
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : danger.severity === 'tight'
+                                                    ? 'bg-amber-100 text-amber-700'
+                                                    : 'bg-yellow-100 text-yellow-700'
+                                                }`}
+                                              >
+                                                {danger.severity}
+                                              </span>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                                {insights.dangerDays.length === 0 && (
+                                  <div className="px-3 py-2 text-xs text-amber-800/70 border-t border-amber-100/70">
+                                    No danger days detected in this month forecast.
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-1">
+                        <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                          <p className="text-warm-800/40 text-[11px] font-bold tracking-wider uppercase mb-3">Action recommendations</p>
+                          <div className="space-y-2 max-h-52 overflow-auto pr-1">
+                            {insights.recommendations.length === 0 ? (
+                              <p className="text-sm text-warm-800/45">No recommendations generated.</p>
+                            ) : (
+                              insights.recommendations.map((rec, idx) => (
+                                <div key={`${rec.title}-${idx}`} className="rounded-xl bg-white border border-warm-100 p-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-sm font-semibold text-warm-900">{rec.title}</p>
+                                    <span className="text-xs font-semibold text-sage-700 whitespace-nowrap">{formatCurrency(rec.impactPerMonth)}/mo</span>
+                                  </div>
+                                  <p className="text-xs text-warm-800/55 mt-1">{rec.reason}</p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
+              <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
+                <div className="px-6 py-4 border-b border-warm-100/60 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase">Scriptable Widget MVP</p>
+                    <h3 className="font-display font-700 text-base text-warm-900 tracking-tight mt-1">Put your mascot on the iPhone home screen</h3>
+                    <p className="text-sm text-warm-800/45 mt-2 max-w-2xl">
+                      Copy the script into the Scriptable app, add a medium Scriptable widget on iPhone, and point it at your spending summary.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyWidgetUrl()}
+                      className="px-4 py-2 rounded-xl bg-warm-100 text-warm-900 text-sm font-semibold hover:bg-warm-200 transition-colors">
+                      Copy widget URL
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyScriptableScript()}
+                      className="px-4 py-2 rounded-xl bg-warm-900 text-white text-sm font-semibold hover:bg-warm-800 transition-colors">
+                      Copy Scriptable script
+                    </motion.button>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Widget token</p>
+                      <p className="font-mono text-sm text-warm-900 break-all">{widgetToken ? `...${widgetToken.slice(-12)}` : 'Unavailable'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Endpoint</p>
+                      <p className="text-xs text-warm-800/60 break-all">{widgetUrl || 'Sign in again to generate a widget URL.'}</p>
+                    </div>
+                  </div>
+                  {widgetStatus && (
+                    <div className="rounded-2xl bg-sage-50 border border-sage-200/70 px-4 py-3 text-sm font-medium text-sage-700">
+                      {widgetStatus}
+                    </div>
+                  )}
+                  {widgetUsesLocalhost && (
+                    <div className="rounded-2xl bg-amber-50 border border-amber-200/70 px-4 py-3 text-sm font-medium text-amber-700">
+                      This URL uses localhost, which will not work from your iPhone. Open the app from a LAN IP or tunnel before copying the script.
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {widgetUrl && (
+                      <a href={widgetUrl} target="_blank" rel="noreferrer" className="font-semibold text-warm-900 underline underline-offset-4">
+                        Preview widget JSON
+                      </a>
+                    )}
+                    <span className="text-warm-800/45">
+                      Scriptable setup is manual on purpose here. It is MVP-only, but it will give you a real iPhone widget.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}>
               <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
                 <div className="px-6 py-4 border-b border-warm-100/60 flex items-center justify-between">
@@ -609,49 +648,6 @@ export default function Dashboard() {
           </div>
         )}
       </main>
-      {showWidgetButton && (
-        <div className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-50 flex flex-col items-end gap-2">
-          <AnimatePresence>
-            {widgetStatus && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                className={`max-w-[280px] rounded-2xl border px-4 py-3 text-sm font-medium shadow-glass backdrop-blur-xl ${
-                  widgetUsesLocalhost
-                    ? 'bg-amber-50/95 border-amber-200/70 text-amber-700'
-                    : 'bg-white/95 border-white/70 text-warm-800/70'
-                }`}
-              >
-                {widgetStatus}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div className="flex items-center gap-2">
-            {widgetUrl && (
-              <a
-                href={widgetUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="h-11 w-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/70 shadow-glass text-warm-800/60 hover:text-warm-900 hover:bg-white transition-all flex items-center justify-center"
-                title="Preview widget JSON"
-              >
-                <ExternalLink size={16} />
-              </a>
-            )}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => void handleCopyScriptableScript()}
-              className="flex items-center gap-2 rounded-2xl bg-warm-900/95 text-white px-4 py-3 shadow-glass border border-warm-900/20 hover:bg-warm-800 transition-all"
-              title="Copy Scriptable widget setup"
-            >
-              <Copy size={15} />
-              <span className="font-semibold text-sm">Copy Widget Script</span>
-            </motion.button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -661,6 +657,15 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
     <div className="rounded-2xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-card p-4 hover:shadow-card-hover transition-shadow">
       <div className="flex items-center gap-2 mb-2 text-warm-800/30">{icon}<span className="text-[11px] font-bold tracking-wider uppercase">{label}</span></div>
       <p className={`font-display font-700 text-sm tracking-tight truncate ${accent ? 'text-warm-900' : 'text-warm-800/70'}`}>{value}</p>
+    </div>
+  )
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-warm-50/80 border border-warm-100/70 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-warm-800/40">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-warm-900">{value}</p>
     </div>
   )
 }
