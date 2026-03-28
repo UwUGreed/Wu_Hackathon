@@ -12,7 +12,15 @@ export interface AuthSession {
     id: string
     email: string
     displayName: string
+    widgetToken: string | null
   }
+}
+
+export interface AuthUser {
+  id: string
+  email: string
+  displayName: string
+  widgetToken: string | null
 }
 
 export function getStoredAuthSession(): AuthSession | null {
@@ -61,6 +69,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T
 }
 
+export function getApiBaseUrl() {
+  if (BASE.startsWith('http://') || BASE.startsWith('https://')) {
+    return BASE.replace(/\/$/, '')
+  }
+
+  if (typeof window === 'undefined') {
+    return BASE.replace(/\/$/, '')
+  }
+
+  return new URL(BASE, window.location.origin).toString().replace(/\/$/, '')
+}
+
+export function buildApiUrl(path: string) {
+  return new URL(path.replace(/^\//, ''), `${getApiBaseUrl()}/`).toString()
+}
+
 // ─── Types matching backend responses ─────────────────────────────
 
 export interface HomeData {
@@ -106,7 +130,7 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
 
-  me: () => request<{ id: string; email: string; displayName: string }>('/auth/me'),
+  me: () => request<AuthUser>('/auth/me'),
 
   createLinkToken: () =>
     request<{ link_token: string; expiration: string }>('/plaid/link-token', {

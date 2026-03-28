@@ -4,7 +4,7 @@ import {
   Shield, LogOut, RefreshCw, Wallet, TrendingDown,
   Building2, CreditCard, ArrowDownRight, ArrowUpRight, Clock, Trash2
 } from 'lucide-react'
-import { api } from '../api'
+import { api, buildApiUrl } from '../api'
 import type { Transaction } from '../api'
 import { useAppStore } from '../store'
 import Mascot from './Mascot'
@@ -35,10 +35,193 @@ function formatDate(d: string) {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+
+  const didCopy = document.execCommand('copy')
+  document.body.removeChild(textarea)
+
+  if (!didCopy) {
+    throw new Error('Clipboard copy failed')
+  }
+}
+
+function buildScriptableWidgetScript(widgetUrl: string, appUrl: string) {
+  return `const API_URL = ${JSON.stringify(widgetUrl)}
+const OPEN_URL = ${JSON.stringify(appUrl)}
+
+const palette = {
+  happy: { top: '#F4FBEF', bottom: '#DCEFD2', accent: '#3F7A35' },
+  calm: { top: '#EEF5FF', bottom: '#DCE9FF', accent: '#2F5F9F' },
+  worried: { top: '#FFF6E6', bottom: '#FFE3B0', accent: '#A56400' },
+  alert: { top: '#FFF0EF', bottom: '#FFD7D2', accent: '#B2443B' },
+  sleepy: { top: '#F7F0FF', bottom: '#EBE2FF', accent: '#6A5AA6' },
+}
+
+async function loadData() {
+  const request = new Request(API_URL)
+  request.timeoutInterval = 15
+  return await request.loadJSON()
+}
+
+function formatMoney(value) {
+  if (value === null || value === undefined) return 'Link bank'
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function faceForMood(mood) {
+  if (mood === 'happy') return '◡'
+  if (mood === 'worried') return '﹏'
+  if (mood === 'alert') return 'o'
+  if (mood === 'sleepy') return '︵'
+  return '–'
+}
+
+function drawMascot(mood) {
+  const ctx = new DrawContext()
+  ctx.size = new Size(140, 140)
+  ctx.opaque = false
+  ctx.respectScreenScale = true
+
+  ctx.setFillColor(new Color('#FF954A'))
+  ctx.fillEllipse(new Rect(20, 28, 100, 92))
+
+  ctx.setFillColor(new Color('#5BA65B'))
+  ctx.fillRect(new Rect(68, 12, 5, 18))
+  ctx.setFillColor(new Color('#6BC26B'))
+  ctx.fillEllipse(new Rect(52, 6, 22, 16))
+  ctx.fillEllipse(new Rect(68, 6, 22, 16))
+
+  ctx.setFillColor(new Color('#FFFFFF'))
+  const eyeHeight = mood === 'sleepy' ? 6 : 14
+  ctx.fillEllipse(new Rect(45, 58, 16, eyeHeight))
+  ctx.fillEllipse(new Rect(79, 58, 16, eyeHeight))
+
+  ctx.setFillColor(new Color('#2D2D3D'))
+  const pupilHeight = mood === 'sleepy' ? 2 : 8
+  ctx.fillEllipse(new Rect(49, 61, 8, pupilHeight))
+  ctx.fillEllipse(new Rect(83, 61, 8, pupilHeight))
+
+  ctx.setTextAlignedCenter()
+  ctx.setTextColor(new Color('#2D2D3D'))
+  ctx.setFont(Font.mediumSystemFont(mood === 'alert' ? 24 : 22))
+  ctx.drawTextInRect(faceForMood(mood), new Rect(0, 82, 140, 26))
+
+  return ctx.getImage()
+}
+
+function buildWidget(data) {
+  const mood = data.mood || 'calm'
+  const theme = palette[mood] || palette.calm
+
+  const widget = new ListWidget()
+  const gradient = new LinearGradient()
+  gradient.colors = [new Color(theme.top), new Color(theme.bottom)]
+  gradient.locations = [0, 1]
+  widget.backgroundGradient = gradient
+  widget.setPadding(16, 16, 16, 16)
+  widget.url = OPEN_URL
+
+  const topRow = widget.addStack()
+  topRow.layoutHorizontally()
+  topRow.centerAlignContent()
+
+  const mascot = topRow.addImage(drawMascot(mood))
+  mascot.imageSize = new Size(68, 68)
+
+  topRow.addSpacer(12)
+
+  const details = topRow.addStack()
+  details.layoutVertically()
+
+  const nameLine = details.addText(data.displayName || 'Make It to Payday')
+  nameLine.font = Font.mediumSystemFont(12)
+  nameLine.textColor = new Color('#6B7280')
+
+  const amountLine = details.addText(formatMoney(data.safeToSpendToday))
+  amountLine.font = Font.boldRoundedSystemFont(26)
+  amountLine.textColor = new Color(theme.accent)
+
+  const riskLine = details.addText(data.linked ? (data.risk || 'CHECK-IN') : 'NOT LINKED')
+  riskLine.font = Font.semiboldSystemFont(11)
+  riskLine.textColor = new Color('#4B5563')
+
+  widget.addSpacer(12)
+
+  const messageLine = widget.addText(data.message || 'Open the app for details.')
+  messageLine.font = Font.mediumSystemFont(12)
+  messageLine.textColor = new Color('#374151')
+  messageLine.minimumScaleFactor = 0.8
+
+  widget.addSpacer(6)
+
+  const subLine = widget.addText(data.institution || 'Tap to open dashboard')
+  subLine.font = Font.mediumSystemFont(10)
+  subLine.textColor = new Color('#6B7280')
+  subLine.minimumScaleFactor = 0.8
+
+  return widget
+}
+
+function buildErrorWidget(message) {
+  const widget = new ListWidget()
+  widget.backgroundColor = new Color('#FFF7ED')
+  widget.url = OPEN_URL
+  widget.setPadding(16, 16, 16, 16)
+
+  const title = widget.addText('Widget setup needed')
+  title.font = Font.boldSystemFont(16)
+  title.textColor = new Color('#9A3412')
+
+  widget.addSpacer(8)
+
+  const detail = widget.addText(message)
+  detail.font = Font.mediumSystemFont(12)
+  detail.textColor = new Color('#7C2D12')
+  detail.minimumScaleFactor = 0.8
+
+  return widget
+}
+
+let widget
+
+try {
+  const data = await loadData()
+  widget = buildWidget(data)
+} catch (error) {
+  widget = buildErrorWidget('Check your widget URL and make sure your backend is reachable from the iPhone.')
+}
+
+if (config.runsInWidget) {
+  Script.setWidget(widget)
+} else {
+  await widget.presentMedium()
+}
+
+Script.complete()
+`
+}
+
 export default function Dashboard() {
-  const { homeData, setHomeData, logout, setError, error } = useAppStore()
+  const { homeData, setHomeData, logout, setError, error, authSession } = useAppStore()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [widgetStatus, setWidgetStatus] = useState<string | null>(null)
 
   const fetchHome = async (showRefresh = false) => {
     if (showRefresh) setIsRefreshing(true)
@@ -71,6 +254,39 @@ export default function Dashboard() {
   const risk = homeData?.risk ?? 'CALM'
   const colors = riskColors[risk] ?? riskColors.CALM
   const mood = riskToMood[risk] ?? 'calm'
+  const widgetToken = authSession?.user.widgetToken ?? null
+  const widgetUrl = widgetToken ? `${buildApiUrl('widget/summary')}?token=${encodeURIComponent(widgetToken)}` : ''
+  const appUrl = typeof window === 'undefined' ? '/dashboard' : new URL('/dashboard', window.location.origin).toString()
+  const scriptableScript = widgetUrl ? buildScriptableWidgetScript(widgetUrl, appUrl) : ''
+  const widgetUsesLocalhost = widgetUrl.includes('localhost') || widgetUrl.includes('127.0.0.1')
+
+  const handleCopyWidgetUrl = async () => {
+    if (!widgetUrl) {
+      setWidgetStatus('No widget token yet. Sign in again to generate one.')
+      return
+    }
+
+    try {
+      await copyText(widgetUrl)
+      setWidgetStatus('Widget URL copied. Paste it into Scriptable or use it to preview the JSON.')
+    } catch {
+      setWidgetStatus('Could not copy the widget URL automatically.')
+    }
+  }
+
+  const handleCopyScriptableScript = async () => {
+    if (!scriptableScript) {
+      setWidgetStatus('No widget token yet. Sign in again to generate one.')
+      return
+    }
+
+    try {
+      await copyText(scriptableScript)
+      setWidgetStatus('Script copied. Paste it into a new Scriptable script on your iPhone.')
+    } catch {
+      setWidgetStatus('Could not copy the Scriptable script automatically.')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-warm-50 font-body">
@@ -144,6 +360,61 @@ export default function Dashboard() {
               <StatCard icon={<CreditCard size={18} />} label="Account" value={homeData?.accountName ?? '—'} />
               <StatCard icon={<Wallet size={18} />} label="Current Balance" value={formatCurrency(homeData?.balance ?? null)} accent />
               <StatCard icon={<TrendingDown size={18} />} label="Available" value={formatCurrency(homeData?.availableBalance ?? null)} />
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
+              <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
+                <div className="px-6 py-4 border-b border-warm-100/60 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase">Scriptable Widget MVP</p>
+                    <h3 className="font-display font-700 text-base text-warm-900 tracking-tight mt-1">Put your mascot on the iPhone home screen</h3>
+                    <p className="text-sm text-warm-800/45 mt-2 max-w-2xl">
+                      Copy the script into the Scriptable app, add a medium Scriptable widget on iPhone, and point it at your spending summary.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyWidgetUrl()}
+                      className="px-4 py-2 rounded-xl bg-warm-100 text-warm-900 text-sm font-semibold hover:bg-warm-200 transition-colors">
+                      Copy widget URL
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyScriptableScript()}
+                      className="px-4 py-2 rounded-xl bg-warm-900 text-white text-sm font-semibold hover:bg-warm-800 transition-colors">
+                      Copy Scriptable script
+                    </motion.button>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Widget token</p>
+                      <p className="font-mono text-sm text-warm-900 break-all">{widgetToken ? `...${widgetToken.slice(-12)}` : 'Unavailable'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
+                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Endpoint</p>
+                      <p className="text-xs text-warm-800/60 break-all">{widgetUrl || 'Sign in again to generate a widget URL.'}</p>
+                    </div>
+                  </div>
+                  {widgetStatus && (
+                    <div className="rounded-2xl bg-sage-50 border border-sage-200/70 px-4 py-3 text-sm font-medium text-sage-700">
+                      {widgetStatus}
+                    </div>
+                  )}
+                  {widgetUsesLocalhost && (
+                    <div className="rounded-2xl bg-amber-50 border border-amber-200/70 px-4 py-3 text-sm font-medium text-amber-700">
+                      This URL uses localhost, which will not work from your iPhone. Open the app from a LAN IP or tunnel before copying the script.
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {widgetUrl && (
+                      <a href={widgetUrl} target="_blank" rel="noreferrer" className="font-semibold text-warm-900 underline underline-offset-4">
+                        Preview widget JSON
+                      </a>
+                    )}
+                    <span className="text-warm-800/45">
+                      Scriptable setup is manual on purpose here. It is MVP-only, but it will give you a real iPhone widget.
+                    </span>
+                  </div>
+                </div>
+              </div>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}>
               <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
