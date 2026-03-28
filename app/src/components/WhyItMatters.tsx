@@ -8,7 +8,7 @@ const reasons = [
 ]
 
 const differences = [{
-  left: 'Traditional finance apps', right: 'Make It to Payday',
+  left: 'Traditional finance apps', right: 'Gooblet',
   pairs: [
     ['Track every dollar', 'One number: safe to spend'],
     ['"You overspent on food"', '"Maybe skip Uber — rent hits Thursday"'],

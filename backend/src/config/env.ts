@@ -20,7 +20,7 @@ const envSchema = z.object({
   PLAID_ENV: z.enum(["sandbox", "development", "production"]).default("sandbox"),
   FRONTEND_ORIGIN: z.string().default("http://localhost:3000"),
   DEMO_AUTH_TOKEN: z.string().default("demo-token"),
-  DEMO_PASSWORD: z.string().default("payday"),
+  DEMO_PASSWORD: z.string().default("gooblet"),
   RESERVE_BUFFER: z.string().default("75"),
   DATABASE_URL: z.string().default("file:./dev.db"),
 });

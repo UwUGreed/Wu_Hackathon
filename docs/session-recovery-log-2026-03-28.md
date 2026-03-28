@@ -1,4 +1,4 @@
-# Wu Hackathon Recovery Log
+# Gooblet Recovery Log
 
 Date: 2026-03-28
 
@@ -44,7 +44,7 @@ Stabilize local development, fix backend startup/auth issues, sync Prisma/SQLite
 - rm -rf node_modules package-lock.json
 - npm run dev
 - cd /home/spike3y/Desktop/Wu_Hackathon/backend && pwd && ls -la .env && node -e "const dotenv=require('dotenv'); const r=dotenv.config({path:'./.env', override:true}); console.log('dotenvError', !!r.error); console.log('client', process.env.PLAID_CLIENT_ID); console.log('secret', process.env.PLAID_SECRET);"
-- curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' -d '{"username":"custom_billybob","password":"payday"}'
+- curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' -d '{"username":"custom_billybob","password":"gooblet"}'
 
 ### Recovery commands applied
 - npm --prefix /home/spike3y/Desktop/Wu_Hackathon/backend install
@@ -56,7 +56,7 @@ Stabilize local development, fix backend startup/auth issues, sync Prisma/SQLite
 - npm --prefix /home/spike3y/Desktop/Wu_Hackathon/app install --legacy-peer-deps
 - npm --prefix /home/spike3y/Desktop/Wu_Hackathon/app run dev
 - curl -s http://localhost:3001/health
-- curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' -d '{"username":"custom_billybob","password":"payday"}'
+- curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' -d '{"username":"custom_billybob","password":"gooblet"}'
 
 ## Final State
 - Backend reachable on port 3001.

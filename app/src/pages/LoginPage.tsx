@@ -24,7 +24,7 @@ export default function LoginPage() {
       login(session)
       navigate('/dashboard')
     } catch {
-      setError('Wrong credentials — try your username / payday')
+      setError('Wrong credentials — try your username / gooblet')
       setIsShaking(true)
       setTimeout(() => setIsShaking(false), 600)
     } finally {
@@ -48,7 +48,7 @@ export default function LoginPage() {
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }} className="flex items-center gap-2 mt-2">
               <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center"><Shield size={14} className="text-white" /></div>
-              <span className="font-display font-800 text-lg text-warm-900 tracking-tight">Make It to Payday</span>
+              <span className="font-display font-800 text-lg text-warm-900 tracking-tight">Gooblet</span>
             </motion.div>
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }} className="text-warm-800/40 text-sm mt-2 text-center">Sign in to your financial companion</motion.p>
           </div>
@@ -61,7 +61,7 @@ export default function LoginPage() {
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
               <label className="block text-[11px] font-bold text-warm-800/40 tracking-wider uppercase mb-1.5 ml-1">Password</label>
               <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} placeholder="payday" autoComplete="current-password"
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setError('') }} placeholder="gooblet" autoComplete="current-password"
                   className="w-full px-4 py-3.5 rounded-xl bg-warm-50/80 border border-warm-200/60 text-warm-900 font-medium text-sm placeholder:text-warm-800/25 focus:outline-none focus:ring-2 focus:ring-brand-400/30 focus:border-brand-300 transition-all pr-12" />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-warm-800/30 hover:text-warm-800/60 transition-colors">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -76,7 +76,7 @@ export default function LoginPage() {
               </motion.button>
             </motion.div>
           </form>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="text-center text-warm-800/25 text-xs mt-6">Hint: any username / payday</motion.p>
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }} className="text-center text-warm-800/25 text-xs mt-6">Hint: any username / gooblet</motion.p>
         </motion.div>
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }} className="text-center mt-4">
           <a href="/" className="text-sm text-warm-800/40 hover:text-warm-800/60 font-medium transition-colors">← Back to home</a>

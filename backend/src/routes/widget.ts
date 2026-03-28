@@ -54,7 +54,7 @@ router.get("/widget/summary", async (req: Request, res: Response) => {
     const mood = home.risk ? (riskToMood[home.risk] ?? "calm") : "sleepy";
     const message = home.risk
       ? (riskMessages[home.risk] ?? "Check in with your spending today.")
-      : "Link your bank in Make It to Payday to fill this widget.";
+      : "Link your bank in Gooblet to fill this widget.";
 
     const response: WidgetSummaryResponse = {
       linked: home.linked,

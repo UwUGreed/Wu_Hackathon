@@ -30,7 +30,7 @@ export default function Navbar() {
             {scrolled && (
               <motion.span initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }} transition={{ duration: 0.2 }}
                 className="font-display font-700 text-sm text-warm-900 tracking-tight whitespace-nowrap overflow-hidden">
-                Make It to Payday
+                Gooblet
               </motion.span>
             )}
           </AnimatePresence>

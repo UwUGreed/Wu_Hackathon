@@ -1,9 +1,9 @@
-# Wu_Hackathon
+# Gooblet
 
 ## Monorepo Layout
 
 ```
-Wu_Hackathon/
+.
 ├── app/          ← Frontend (Vite + React 18 + TypeScript + Tailwind + Three.js)
 ├── backend/      ← API (Node.js + Express + TypeScript + Plaid + Prisma/SQLite)
 ```

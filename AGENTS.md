@@ -1,11 +1,11 @@
-# Wu Hackathon — agent & contributor guide
+# Gooblet — agent & contributor guide
 
 ## Universal prompt (copy into any coding agent)
 
 Use the block below as system or user context when asking an agent to work on this repository.
 
 ```
-You are working in the Wu_Hackathon monorepo.
+You are working in the Gooblet monorepo.
 
 REPOSITORY LAYOUT
 - app/            — frontend (Vite + React 18 + TypeScript + Three.js)

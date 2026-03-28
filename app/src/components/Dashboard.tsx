@@ -159,7 +159,7 @@ function buildWidget(data) {
   const details = topRow.addStack()
   details.layoutVertically()
 
-  const nameLine = details.addText(data.displayName || 'Make It to Payday')
+  const nameLine = details.addText(data.displayName || 'Gooblet')
   nameLine.font = Font.mediumSystemFont(12)
   nameLine.textColor = new Color('#6B7280')
 
@@ -771,7 +771,7 @@ export default function Dashboard() {
               <Shield size={16} className="text-white" />
             </div>
             <span className="font-display font-700 text-sm text-warm-900 tracking-tight">
-              Make It to Payday
+              Gooblet
             </span>
           </div>
           <div className="flex items-center gap-1">

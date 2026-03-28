@@ -9,7 +9,7 @@ export default function DemoPage() {
         <div className="section-pad flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center shadow-sm"><Shield size={16} className="text-white" /></div>
-            <span className="font-display font-700 text-sm text-warm-900 tracking-tight">Make It to Payday</span>
+            <span className="font-display font-700 text-sm text-warm-900 tracking-tight">Gooblet</span>
           </Link>
           <Link to="/" className="flex items-center gap-1.5 text-sm font-semibold text-warm-800/50 hover:text-warm-800 transition-colors"><ArrowLeft size={15} />Back to home</Link>
         </div>

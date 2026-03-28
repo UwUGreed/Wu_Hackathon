@@ -4,7 +4,7 @@
  */
 
 const BASE = import.meta.env.VITE_API_URL || '/api'
-const AUTH_STORAGE_KEY = 'make-it-to-payday-auth'
+const AUTH_STORAGE_KEY = 'gooblet-auth'
 
 export interface AuthSession {
   token: string
