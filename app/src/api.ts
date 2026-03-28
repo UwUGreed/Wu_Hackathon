@@ -119,6 +119,54 @@ export interface AccountInfo {
   isoCurrencyCode: string | null;
 }
 
+export interface AISubscription {
+  name: string;
+  amount: number;
+  frequency: string;
+  confidence: number;
+  transactions: string[];
+}
+
+export interface AISpendingPattern {
+  category: string;
+  totalAmount: number;
+  transactionCount: number;
+  averageAmount: number;
+  trend: 'increasing' | 'stable' | 'decreasing';
+}
+
+export interface AIBudgetPlan {
+  weeklyNeedsBudget: number;
+  weeklyWantsBudget: number;
+  weeklySavingsTarget: number;
+  dailySpendingCap: number;
+  next30DayCashFlow: number;
+}
+
+export interface AIRecommendation {
+  title: string;
+  reason: string;
+  impactPerMonth: number;
+}
+
+export interface AIDangerDay {
+  date: string;
+  projectedBalance: number;
+  severity: 'watch' | 'tight' | 'critical';
+  reason: string;
+}
+
+export interface BudgetInsights {
+  subscriptions: AISubscription[];
+  spendingPatterns: AISpendingPattern[];
+  summary: string;
+  totalMonthlySubscriptions: number;
+  budgetPlan: AIBudgetPlan;
+  nextPayday: string | null;
+  dangerDays: AIDangerDay[];
+  recommendations: AIRecommendation[];
+}
+
 // ─── API methods ──────────────────────────────────────────────────
 
 export const api = {
@@ -153,6 +201,8 @@ export const api = {
   accounts: () => request<{ accounts: AccountInfo[] }>('/accounts'),
 
   transactions: () => request<{ transactions: Transaction[] }>('/transactions'),
+
+  insights: () => request<BudgetInsights>('/insights'),
 
   seedCustomUser: (institutionId = 'ins_109508') =>
     request<HomeData & { success: boolean }>('/dev/seed-custom-user', {
