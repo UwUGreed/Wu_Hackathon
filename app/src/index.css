@@ -16,7 +16,7 @@ html {
 body {
   @apply bg-warm-50 text-warm-900;
   margin: 0;
-  overflow-x: hidden;
+  /* overflow-x: hidden; removed to allow mascot overflow */
 }
 
 /* Hide scrollbar for swipeable sections */
