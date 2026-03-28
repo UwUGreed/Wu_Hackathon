@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   PlaidLinkError,
   PlaidLinkOnEventMetadata,
+  PlaidLinkOnSuccessMetadata,
   PlaidLinkStableEvent,
   usePlaidLink,
 } from 'react-plaid-link'
@@ -54,12 +55,15 @@ export default function PlaidLinkButton({ onLinked }: PlaidLinkButtonProps) {
     void createLinkToken()
   }, [createLinkToken])
 
-  const onSuccess = useCallback(async (publicToken: string) => {
+  const onSuccess = useCallback(async (publicToken: string, metadata: PlaidLinkOnSuccessMetadata) => {
     let exchangeSucceeded = false
     setHasPendingOpen(false)
     setIsExchanging(true)
     try {
-      const data = await api.exchangePublicToken(publicToken)
+      const institutionId = metadata.institution?.institution_id
+      const data = institutionId
+        ? await api.seedCustomUser(institutionId)
+        : await api.exchangePublicToken(publicToken)
       setHomeData(data)
       setError(null)
       exchangeSucceeded = true
@@ -101,7 +105,7 @@ export default function PlaidLinkButton({ onLinked }: PlaidLinkButtonProps) {
 
   const { open, ready, error } = usePlaidLink({
     token: linkToken,
-    onSuccess: (public_token) => onSuccess(public_token),
+    onSuccess: (public_token, metadata) => onSuccess(public_token, metadata),
     onExit,
     onEvent,
     onLoad: () => setHasPlaidLoaded(true),
