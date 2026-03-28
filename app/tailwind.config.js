@@ -1,0 +1,67 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['"Outfit"', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          50: '#fef5f3',
+          100: '#fde8e3',
+          200: '#fdd5cc',
+          300: '#fbb5a6',
+          400: '#f78a72',
+          500: '#ee6a4d',
+          600: '#db4f2f',
+          700: '#b83e22',
+          800: '#983720',
+          900: '#7e3221',
+        },
+        sage: {
+          50: '#f4f9f4',
+          100: '#e5f2e6',
+          200: '#cce5cf',
+          300: '#a3ceaa',
+          400: '#74b17e',
+          500: '#52955e',
+          600: '#407a49',
+          700: '#35613c',
+          800: '#2d4e33',
+          900: '#26402c',
+        },
+        lavender: {
+          50: '#f6f4fe',
+          100: '#efeafd',
+          200: '#e0d7fc',
+          300: '#c9b8f9',
+          400: '#ae90f4',
+          500: '#9466ed',
+          600: '#8247e2',
+          700: '#7235cd',
+          800: '#602dac',
+          900: '#50268d',
+        },
+        warm: {
+          50: '#FDFCFA',
+          100: '#FAF8F4',
+          200: '#F5F0E8',
+          300: '#EDE5D8',
+          800: '#2A2A3C',
+          900: '#1A1A2E',
+          950: '#0F0F1E',
+        },
+      },
+      boxShadow: {
+        glow: '0 0 40px -8px rgba(238,106,77,0.18)',
+        card: '0 2px 16px -2px rgba(0,0,0,0.06), 0 1px 3px -1px rgba(0,0,0,0.04)',
+        'card-hover': '0 8px 30px -4px rgba(0,0,0,0.1), 0 2px 6px -2px rgba(0,0,0,0.05)',
+        soft: '0 4px 20px -4px rgba(0,0,0,0.08)',
+        glass: '0 8px 32px 0 rgba(0,0,0,0.04)',
+      },
+    },
+  },
+  plugins: [],
+}
