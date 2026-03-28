@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id
+  email       String   @unique
+  displayName String   @map("display_name")
+  authToken   String   @map("auth_token")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  plaidItems   PlaidItem[]
+  accounts     Account[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model PlaidItem {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  itemId          String   @unique @map("item_id")
+  accessToken     String   @map("access_token")
+  institutionName String?  @map("institution_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("plaid_items")
+}
+
+model Account {
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  plaidAccountId   String   @unique @map("plaid_account_id")
+  itemId           String   @map("item_id")
+  name             String
+  officialName     String?  @map("official_name")
+  type             String
+  subtype          String?
+  mask             String?
+  currentBalance   Float?   @map("current_balance")
+  availableBalance Float?   @map("available_balance")
+  isoCurrencyCode  String?  @map("iso_currency_code")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Transaction {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  plaidTransactionId String   @unique @map("plaid_transaction_id")
+  plaidAccountId     String   @map("plaid_account_id")
+  name               String
+  amount             Float
+  date               String
+  pending            Boolean  @default(false)
+  categoryJson       String?  @map("category_json")
+  rawJson            String?  @map("raw_json")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}

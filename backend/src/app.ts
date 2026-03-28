@@ -1,0 +1,24 @@
+import express from "express";
+import cors from "cors";
+import { env } from "./config/env";
+import { errorHandler } from "./middleware/error";
+import healthRouter from "./routes/health";
+import authRouter from "./routes/auth";
+import plaidRouter from "./routes/plaid";
+import homeRouter from "./routes/home";
+import accountsRouter from "./routes/accounts";
+import transactionsRouter from "./routes/transactions";
+import devRouter from "./routes/dev";
+
+const app = express();
+app.use(express.json());
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:5173", env.FRONTEND_ORIGIN].filter(Boolean), credentials: true }));
+app.use(healthRouter);
+app.use(authRouter);
+app.use(plaidRouter);
+app.use(homeRouter);
+app.use(accountsRouter);
+app.use(transactionsRouter);
+app.use(devRouter);
+app.use(errorHandler);
+export default app;
