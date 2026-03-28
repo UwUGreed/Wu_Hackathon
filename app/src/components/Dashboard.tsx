@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, LogOut, RefreshCw, Wallet, TrendingDown,
-  Building2, CreditCard, ArrowDownRight, ArrowUpRight, Clock, Trash2
+  Building2, CreditCard, ArrowDownRight, ArrowUpRight, Clock, Trash2, Copy, ExternalLink
 } from 'lucide-react'
 import { api, buildApiUrl } from '../api'
 import type { Transaction } from '../api'
@@ -62,11 +62,11 @@ function buildScriptableWidgetScript(widgetUrl: string, appUrl: string) {
 const OPEN_URL = ${JSON.stringify(appUrl)}
 
 const palette = {
-  happy: { top: '#F4FBEF', bottom: '#DCEFD2', accent: '#3F7A35' },
-  calm: { top: '#EEF5FF', bottom: '#DCE9FF', accent: '#2F5F9F' },
-  worried: { top: '#FFF6E6', bottom: '#FFE3B0', accent: '#A56400' },
-  alert: { top: '#FFF0EF', bottom: '#FFD7D2', accent: '#B2443B' },
-  sleepy: { top: '#F7F0FF', bottom: '#EBE2FF', accent: '#6A5AA6' },
+  happy: { top: '#F9FCEB', bottom: '#DFF2C8', accent: '#3F7A35', accentSoft: '#EDF8E2', orb: '#A7D37A' },
+  calm: { top: '#EFF6FF', bottom: '#D6E7FF', accent: '#2F5F9F', accentSoft: '#E5F0FF', orb: '#93B9F3' },
+  worried: { top: '#FFF7EA', bottom: '#FFDCA7', accent: '#A56400', accentSoft: '#FFF0D5', orb: '#F2B75A' },
+  alert: { top: '#FFF2F0', bottom: '#FFD6CF', accent: '#B2443B', accentSoft: '#FFE7E2', orb: '#F09384' },
+  sleepy: { top: '#F6F1FF', bottom: '#E6DEFF', accent: '#6A5AA6', accentSoft: '#F0EBFF', orb: '#B7A6F4' },
 }
 
 async function loadData() {
@@ -80,52 +80,155 @@ function formatMoney(value) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: Math.abs(value) < 100 ? 2 : 0,
+    maximumFractionDigits: Math.abs(value) < 100 ? 2 : 0,
   }).format(value)
 }
 
-function faceForMood(mood) {
-  if (mood === 'happy') return '◡'
-  if (mood === 'worried') return '﹏'
-  if (mood === 'alert') return 'o'
-  if (mood === 'sleepy') return '︵'
-  return '–'
+function formatUpdatedAt(value) {
+  if (!value) return 'Updated just now'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Updated just now'
+
+  let hours = date.getHours()
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const suffix = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+
+  return 'Updated ' + hours + ':' + minutes + ' ' + suffix
 }
 
-function drawMascot(mood) {
+function shortenInstitution(value) {
+  if (!value) return 'Demo mode'
+  if (value.length <= 16) return value
+  return value.slice(0, 15) + '…'
+}
+
+function addPill(parent, text, backgroundColor, textColor) {
+  const pill = parent.addStack()
+  pill.layoutHorizontally()
+  pill.centerAlignContent()
+  pill.backgroundColor = new Color(backgroundColor)
+  pill.cornerRadius = 999
+  pill.setPadding(6, 10, 6, 10)
+
+  const label = pill.addText(text)
+  label.font = Font.mediumSystemFont(10)
+  label.textColor = new Color(textColor)
+  label.lineLimit = 1
+
+  return pill
+}
+
+function addSoftGlow(ctx, theme) {
+  ctx.setFillColor(new Color(theme.orb, 0.18))
+  ctx.fillEllipse(new Rect(20, 28, 180, 180))
+  ctx.setFillColor(new Color('#FFFFFF', 0.28))
+  ctx.fillEllipse(new Rect(36, 42, 92, 92))
+  ctx.setFillColor(new Color('#FFFFFF', 0.12))
+  ctx.fillEllipse(new Rect(54, 46, 120, 120))
+}
+
+function drawEyes(ctx, mood) {
+  if (mood === 'sleepy') {
+    ctx.setFillColor(new Color('#2D2D3D', 0.9))
+    ctx.fillEllipse(new Rect(62, 96, 30, 6))
+    ctx.fillEllipse(new Rect(128, 96, 30, 6))
+    return
+  }
+
+  if (mood === 'happy') {
+    ctx.setFillColor(new Color('#2D2D3D', 0.9))
+    ctx.fillEllipse(new Rect(62, 94, 28, 8))
+    ctx.fillEllipse(new Rect(130, 94, 28, 8))
+    return
+  }
+
+  ctx.setFillColor(new Color('#FFFFFF'))
+  const eyeHeight = mood === 'alert' ? 26 : 22
+  ctx.fillEllipse(new Rect(58, 84, 32, eyeHeight))
+  ctx.fillEllipse(new Rect(130, 84, 32, eyeHeight))
+
+  ctx.setFillColor(new Color('#2D2D3D'))
+  const pupilWidth = mood === 'alert' ? 14 : 12
+  const pupilHeight = mood === 'alert' ? 14 : 12
+  const pupilY = mood === 'worried' ? 90 : 92
+  ctx.fillEllipse(new Rect(68, pupilY, pupilWidth, pupilHeight))
+  ctx.fillEllipse(new Rect(140, pupilY, pupilWidth, pupilHeight))
+
+  ctx.setFillColor(new Color('#FFFFFF', 0.75))
+  ctx.fillEllipse(new Rect(72, 92, 4, 4))
+  ctx.fillEllipse(new Rect(144, 92, 4, 4))
+}
+
+function drawMascotFace(ctx, mood) {
+  drawEyes(ctx, mood)
+
+  const mouthMap = {
+    happy: { value: '◡', rect: new Rect(0, 112, 220, 28), size: 28 },
+    calm: { value: '◠', rect: new Rect(0, 114, 220, 26), size: 24 },
+    worried: { value: '﹏', rect: new Rect(0, 114, 220, 26), size: 24 },
+    alert: { value: 'o', rect: new Rect(0, 110, 220, 30), size: 28 },
+    sleepy: { value: '︵', rect: new Rect(0, 114, 220, 24), size: 22 },
+  }
+
+  const mouth = mouthMap[mood] || mouthMap.calm
+  ctx.setTextAlignedCenter()
+  ctx.setTextColor(new Color('#2D2D3D'))
+  ctx.setFont(Font.mediumSystemFont(mouth.size))
+  ctx.drawTextInRect(mouth.value, mouth.rect)
+}
+
+function drawMascot(mood, theme) {
   const ctx = new DrawContext()
-  ctx.size = new Size(140, 140)
+  ctx.size = new Size(220, 220)
   ctx.opaque = false
   ctx.respectScreenScale = true
 
-  ctx.setFillColor(new Color('#FF954A'))
-  ctx.fillEllipse(new Rect(20, 28, 100, 92))
+  addSoftGlow(ctx, theme)
+
+  ctx.setFillColor(new Color('#C25F27', 0.22))
+  ctx.fillEllipse(new Rect(58, 174, 104, 18))
+
+  ctx.setFillColor(new Color('#DE7432'))
+  ctx.fillEllipse(new Rect(62, 154, 30, 20))
+  ctx.fillEllipse(new Rect(128, 154, 30, 20))
+
+  ctx.setFillColor(new Color('#D86B2B'))
+  ctx.fillEllipse(new Rect(46, 74, 128, 110))
+  ctx.setFillColor(new Color('#FF914D'))
+  ctx.fillEllipse(new Rect(40, 58, 136, 112))
+  ctx.setFillColor(new Color('#FFB988', 0.55))
+  ctx.fillEllipse(new Rect(58, 72, 70, 40))
+  ctx.setFillColor(new Color('#F17937', 0.38))
+  ctx.fillEllipse(new Rect(106, 94, 46, 48))
+  ctx.setFillColor(new Color('#FFFFFF', 0.16))
+  ctx.fillEllipse(new Rect(56, 70, 88, 56))
+
+  ctx.setFillColor(new Color('#F78742'))
+  ctx.fillEllipse(new Rect(28, 92, 24, 34))
+  ctx.fillEllipse(new Rect(168, 92, 24, 34))
+
+  ctx.setFillColor(new Color('#FF7A93', 0.34))
+  ctx.fillEllipse(new Rect(44, 110, 22, 14))
+  ctx.fillEllipse(new Rect(154, 110, 22, 14))
 
   ctx.setFillColor(new Color('#5BA65B'))
-  ctx.fillRect(new Rect(68, 12, 5, 18))
+  ctx.fillRect(new Rect(105, 26, 8, 26))
   ctx.setFillColor(new Color('#6BC26B'))
-  ctx.fillEllipse(new Rect(52, 6, 22, 16))
-  ctx.fillEllipse(new Rect(68, 6, 22, 16))
+  ctx.fillEllipse(new Rect(78, 18, 32, 22))
+  ctx.fillEllipse(new Rect(104, 14, 38, 26))
+  ctx.setFillColor(new Color('#8ED98A', 0.55))
+  ctx.fillEllipse(new Rect(88, 20, 16, 10))
+  ctx.fillEllipse(new Rect(112, 17, 18, 11))
 
-  ctx.setFillColor(new Color('#FFFFFF'))
-  const eyeHeight = mood === 'sleepy' ? 6 : 14
-  ctx.fillEllipse(new Rect(45, 58, 16, eyeHeight))
-  ctx.fillEllipse(new Rect(79, 58, 16, eyeHeight))
-
-  ctx.setFillColor(new Color('#2D2D3D'))
-  const pupilHeight = mood === 'sleepy' ? 2 : 8
-  ctx.fillEllipse(new Rect(49, 61, 8, pupilHeight))
-  ctx.fillEllipse(new Rect(83, 61, 8, pupilHeight))
-
-  ctx.setTextAlignedCenter()
-  ctx.setTextColor(new Color('#2D2D3D'))
-  ctx.setFont(Font.mediumSystemFont(mood === 'alert' ? 24 : 22))
-  ctx.drawTextInRect(faceForMood(mood), new Rect(0, 82, 140, 26))
+  drawMascotFace(ctx, mood)
 
   return ctx.getImage()
 }
 
-function buildWidget(data) {
+function buildMediumWidget(data) {
   const mood = data.mood || 'calm'
   const theme = palette[mood] || palette.calm
 
@@ -134,59 +237,192 @@ function buildWidget(data) {
   gradient.colors = [new Color(theme.top), new Color(theme.bottom)]
   gradient.locations = [0, 1]
   widget.backgroundGradient = gradient
-  widget.setPadding(16, 16, 16, 16)
+  widget.setPadding(18, 18, 18, 18)
   widget.url = OPEN_URL
+  widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
 
   const topRow = widget.addStack()
   topRow.layoutHorizontally()
   topRow.centerAlignContent()
 
-  const mascot = topRow.addImage(drawMascot(mood))
-  mascot.imageSize = new Size(68, 68)
+  const mascotCard = topRow.addStack()
+  mascotCard.size = new Size(112, 112)
+  mascotCard.centerAlignContent()
+  mascotCard.backgroundColor = new Color('#FFFFFF', 0.2)
+  mascotCard.cornerRadius = 28
+  mascotCard.borderWidth = 1
+  mascotCard.borderColor = new Color('#FFFFFF', 0.24)
+  const mascot = mascotCard.addImage(drawMascot(mood, theme))
+  mascot.imageSize = new Size(108, 108)
 
-  topRow.addSpacer(12)
+  topRow.addSpacer(14)
 
   const details = topRow.addStack()
   details.layoutVertically()
+  details.centerAlignContent()
+
+  const pillRow = details.addStack()
+  pillRow.layoutHorizontally()
+  addPill(
+    pillRow,
+    data.linked ? (data.risk || 'CHECK-IN') : 'SETUP',
+    theme.accentSoft,
+    theme.accent,
+  )
+  pillRow.addSpacer(6)
+  addPill(
+    pillRow,
+    shortenInstitution(data.institution),
+    '#FFFFFF',
+    '#5B6473',
+  )
+
+  details.addSpacer(10)
+
+  const labelLine = details.addText('SAFE TO SPEND TODAY')
+  labelLine.font = Font.mediumSystemFont(10)
+  labelLine.textColor = new Color('#6B7280')
+
+  details.addSpacer(2)
+
+  const amountLine = details.addText(formatMoney(data.safeToSpendToday))
+  amountLine.font = Font.boldRoundedSystemFont(28)
+  amountLine.textColor = new Color(theme.accent)
+  amountLine.minimumScaleFactor = 0.7
+  amountLine.lineLimit = 1
+
+  details.addSpacer(4)
 
   const nameLine = details.addText(data.displayName || 'Make It to Payday')
   nameLine.font = Font.mediumSystemFont(12)
-  nameLine.textColor = new Color('#6B7280')
+  nameLine.textColor = new Color('#4B5563')
+  nameLine.lineLimit = 1
 
-  const amountLine = details.addText(formatMoney(data.safeToSpendToday))
-  amountLine.font = Font.boldRoundedSystemFont(26)
-  amountLine.textColor = new Color(theme.accent)
-
-  const riskLine = details.addText(data.linked ? (data.risk || 'CHECK-IN') : 'NOT LINKED')
-  riskLine.font = Font.semiboldSystemFont(11)
-  riskLine.textColor = new Color('#4B5563')
+  const stateLine = details.addText(data.linked ? 'Linked and tracking' : 'Not linked yet')
+  stateLine.font = Font.mediumSystemFont(10)
+  stateLine.textColor = new Color('#7A8492')
+  stateLine.lineLimit = 1
 
   widget.addSpacer(12)
 
-  const messageLine = widget.addText(data.message || 'Open the app for details.')
+  const messageCard = widget.addStack()
+  messageCard.layoutHorizontally()
+  messageCard.centerAlignContent()
+  messageCard.backgroundColor = new Color('#FFFFFF', 0.18)
+  messageCard.cornerRadius = 20
+  messageCard.borderWidth = 1
+  messageCard.borderColor = new Color('#FFFFFF', 0.18)
+  messageCard.setPadding(11, 12, 11, 12)
+
+  const pulse = messageCard.addStack()
+  pulse.size = new Size(10, 10)
+  pulse.backgroundColor = new Color(theme.accent)
+  pulse.cornerRadius = 5
+
+  messageCard.addSpacer(10)
+
+  const messageLine = messageCard.addText(data.message || 'Open the app for details.')
   messageLine.font = Font.mediumSystemFont(12)
   messageLine.textColor = new Color('#374151')
   messageLine.minimumScaleFactor = 0.8
+  messageLine.lineLimit = 2
 
-  widget.addSpacer(6)
+  widget.addSpacer(10)
 
-  const subLine = widget.addText(data.institution || 'Tap to open dashboard')
-  subLine.font = Font.mediumSystemFont(10)
-  subLine.textColor = new Color('#6B7280')
-  subLine.minimumScaleFactor = 0.8
+  const footer = widget.addStack()
+  footer.layoutHorizontally()
+  footer.centerAlignContent()
+
+  const updatedLine = footer.addText(formatUpdatedAt(data.updatedAt))
+  updatedLine.font = Font.mediumSystemFont(10)
+  updatedLine.textColor = new Color('#6B7280')
+  updatedLine.lineLimit = 1
+
+  footer.addSpacer()
+
+  const openLine = footer.addText('Tap to open')
+  openLine.font = Font.mediumSystemFont(10)
+  openLine.textColor = new Color(theme.accent)
+  openLine.lineLimit = 1
 
   return widget
 }
 
+function buildSmallWidget(data) {
+  const mood = data.mood || 'calm'
+  const theme = palette[mood] || palette.calm
+
+  const widget = new ListWidget()
+  const gradient = new LinearGradient()
+  gradient.colors = [new Color(theme.top), new Color(theme.bottom)]
+  gradient.locations = [0, 1]
+  widget.backgroundGradient = gradient
+  widget.url = OPEN_URL
+  widget.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000)
+  widget.setPadding(14, 14, 14, 14)
+
+  const top = widget.addStack()
+  top.layoutHorizontally()
+  addPill(top, data.linked ? (data.risk || 'CHECK-IN') : 'SETUP', theme.accentSoft, theme.accent)
+  top.addSpacer()
+
+  widget.addSpacer(6)
+
+  const mascot = widget.addImage(drawMascot(mood, theme))
+  mascot.imageSize = new Size(84, 84)
+  mascot.centerAlignImage()
+
+  widget.addSpacer(4)
+
+  const amount = widget.addText(formatMoney(data.safeToSpendToday))
+  amount.font = Font.boldRoundedSystemFont(22)
+  amount.textColor = new Color(theme.accent)
+  amount.centerAlignText()
+  amount.minimumScaleFactor = 0.7
+  amount.lineLimit = 1
+
+  const label = widget.addText('Safe to spend')
+  label.font = Font.mediumSystemFont(10)
+  label.textColor = new Color('#6B7280')
+  label.centerAlignText()
+  label.lineLimit = 1
+
+  widget.addSpacer()
+
+  const footer = widget.addText(shortenInstitution(data.institution))
+  footer.font = Font.mediumSystemFont(10)
+  footer.textColor = new Color('#4B5563')
+  footer.centerAlignText()
+  footer.lineLimit = 1
+
+  return widget
+}
+
+function buildWidget(data) {
+  if (config.widgetFamily === 'small') return buildSmallWidget(data)
+  return buildMediumWidget(data)
+}
+
 function buildErrorWidget(message) {
   const widget = new ListWidget()
-  widget.backgroundColor = new Color('#FFF7ED')
+  const gradient = new LinearGradient()
+  gradient.colors = [new Color('#FFF8F3'), new Color('#FFE7D6')]
+  gradient.locations = [0, 1]
+  widget.backgroundGradient = gradient
   widget.url = OPEN_URL
   widget.setPadding(16, 16, 16, 16)
+  widget.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000)
+
+  const mascot = widget.addImage(drawMascot('sleepy', palette.sleepy))
+  mascot.imageSize = new Size(80, 80)
+  mascot.centerAlignImage()
+
+  widget.addSpacer(8)
 
   const title = widget.addText('Widget setup needed')
   title.font = Font.boldSystemFont(16)
   title.textColor = new Color('#9A3412')
+  title.centerAlignText()
 
   widget.addSpacer(8)
 
@@ -194,6 +430,8 @@ function buildErrorWidget(message) {
   detail.font = Font.mediumSystemFont(12)
   detail.textColor = new Color('#7C2D12')
   detail.minimumScaleFactor = 0.8
+  detail.centerAlignText()
+  detail.lineLimit = 3
 
   return widget
 }
@@ -259,24 +497,16 @@ export default function Dashboard() {
   const appUrl = typeof window === 'undefined' ? '/dashboard' : new URL('/dashboard', window.location.origin).toString()
   const scriptableScript = widgetUrl ? buildScriptableWidgetScript(widgetUrl, appUrl) : ''
   const widgetUsesLocalhost = widgetUrl.includes('localhost') || widgetUrl.includes('127.0.0.1')
-
-  const handleCopyWidgetUrl = async () => {
-    if (!widgetUrl) {
-      setWidgetStatus('No widget token yet. Sign in again to generate one.')
-      return
-    }
-
-    try {
-      await copyText(widgetUrl)
-      setWidgetStatus('Widget URL copied. Paste it into Scriptable or use it to preview the JSON.')
-    } catch {
-      setWidgetStatus('Could not copy the widget URL automatically.')
-    }
-  }
+  const showWidgetButton = Boolean(widgetToken)
 
   const handleCopyScriptableScript = async () => {
     if (!scriptableScript) {
       setWidgetStatus('No widget token yet. Sign in again to generate one.')
+      return
+    }
+
+    if (widgetUsesLocalhost) {
+      setWidgetStatus('Open the app from your computer’s LAN IP or a tunnel before copying the Scriptable setup.')
       return
     }
 
@@ -361,61 +591,6 @@ export default function Dashboard() {
               <StatCard icon={<Wallet size={18} />} label="Current Balance" value={formatCurrency(homeData?.balance ?? null)} accent />
               <StatCard icon={<TrendingDown size={18} />} label="Available" value={formatCurrency(homeData?.availableBalance ?? null)} />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
-              <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
-                <div className="px-6 py-4 border-b border-warm-100/60 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase">Scriptable Widget MVP</p>
-                    <h3 className="font-display font-700 text-base text-warm-900 tracking-tight mt-1">Put your mascot on the iPhone home screen</h3>
-                    <p className="text-sm text-warm-800/45 mt-2 max-w-2xl">
-                      Copy the script into the Scriptable app, add a medium Scriptable widget on iPhone, and point it at your spending summary.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyWidgetUrl()}
-                      className="px-4 py-2 rounded-xl bg-warm-100 text-warm-900 text-sm font-semibold hover:bg-warm-200 transition-colors">
-                      Copy widget URL
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.98 }} onClick={() => void handleCopyScriptableScript()}
-                      className="px-4 py-2 rounded-xl bg-warm-900 text-white text-sm font-semibold hover:bg-warm-800 transition-colors">
-                      Copy Scriptable script
-                    </motion.button>
-                  </div>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
-                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Widget token</p>
-                      <p className="font-mono text-sm text-warm-900 break-all">{widgetToken ? `...${widgetToken.slice(-12)}` : 'Unavailable'}</p>
-                    </div>
-                    <div className="rounded-2xl bg-warm-50/80 border border-warm-100/70 p-4">
-                      <p className="text-warm-800/30 text-[11px] font-bold tracking-wider uppercase mb-2">Endpoint</p>
-                      <p className="text-xs text-warm-800/60 break-all">{widgetUrl || 'Sign in again to generate a widget URL.'}</p>
-                    </div>
-                  </div>
-                  {widgetStatus && (
-                    <div className="rounded-2xl bg-sage-50 border border-sage-200/70 px-4 py-3 text-sm font-medium text-sage-700">
-                      {widgetStatus}
-                    </div>
-                  )}
-                  {widgetUsesLocalhost && (
-                    <div className="rounded-2xl bg-amber-50 border border-amber-200/70 px-4 py-3 text-sm font-medium text-amber-700">
-                      This URL uses localhost, which will not work from your iPhone. Open the app from a LAN IP or tunnel before copying the script.
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    {widgetUrl && (
-                      <a href={widgetUrl} target="_blank" rel="noreferrer" className="font-semibold text-warm-900 underline underline-offset-4">
-                        Preview widget JSON
-                      </a>
-                    )}
-                    <span className="text-warm-800/45">
-                      Scriptable setup is manual on purpose here. It is MVP-only, but it will give you a real iPhone widget.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.5 }}>
               <div className="rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-glass overflow-hidden">
                 <div className="px-6 py-4 border-b border-warm-100/60 flex items-center justify-between">
@@ -434,6 +609,49 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+      {showWidgetButton && (
+        <div className="fixed right-4 bottom-4 md:right-6 md:bottom-6 z-50 flex flex-col items-end gap-2">
+          <AnimatePresence>
+            {widgetStatus && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                className={`max-w-[280px] rounded-2xl border px-4 py-3 text-sm font-medium shadow-glass backdrop-blur-xl ${
+                  widgetUsesLocalhost
+                    ? 'bg-amber-50/95 border-amber-200/70 text-amber-700'
+                    : 'bg-white/95 border-white/70 text-warm-800/70'
+                }`}
+              >
+                {widgetStatus}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="flex items-center gap-2">
+            {widgetUrl && (
+              <a
+                href={widgetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="h-11 w-11 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/70 shadow-glass text-warm-800/60 hover:text-warm-900 hover:bg-white transition-all flex items-center justify-center"
+                title="Preview widget JSON"
+              >
+                <ExternalLink size={16} />
+              </a>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => void handleCopyScriptableScript()}
+              className="flex items-center gap-2 rounded-2xl bg-warm-900/95 text-white px-4 py-3 shadow-glass border border-warm-900/20 hover:bg-warm-800 transition-all"
+              title="Copy Scriptable widget setup"
+            >
+              <Copy size={15} />
+              <span className="font-semibold text-sm">Copy Widget Script</span>
+            </motion.button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
