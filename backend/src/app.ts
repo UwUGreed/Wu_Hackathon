@@ -10,6 +10,7 @@ import accountsRouter from "./routes/accounts";
 import transactionsRouter from "./routes/transactions";
 import devRouter from "./routes/dev";
 import widgetRouter from "./routes/widget";
+import insightsRouter from "./routes/insights";
 
 const app = express();
 app.use(express.json());
@@ -20,6 +21,7 @@ app.use(plaidRouter);
 app.use(homeRouter);
 app.use(accountsRouter);
 app.use(transactionsRouter);
+app.use(insightsRouter);
 app.use(devRouter);
 app.use(widgetRouter);
 app.use(errorHandler);
